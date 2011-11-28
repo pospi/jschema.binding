@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>JSchema.Binding event tests</title>
+
+    <!-- jQuery -->
+	<script type="text/javascript" src="../lib/jquery-1.7.1.min.js"></script>
+
+    <!-- JSON (where required) -->
+    <script>window.JSON || document.write('<script src="lib/json/json2.js">\x3C/script>')</script>
+
+	<!-- JSON Schema Validator -->
+	<script type="text/javascript" src="../lib/jsv/lib/uri/uri.js"></script>
+    <script type="text/javascript" src="../lib/jsv/lib/jsv.js"></script>
+    <script type="text/javascript" src="../lib/jsv/lib/json-schema-draft-03.js"></script>
+
+    <!-- The actual library -->
+	<script type="text/javascript" src="../jschema.js"></script>
+	<script type="text/javascript" src="../jschema.eventhandler.js"></script>
+	<script type="text/javascript" src="../jschema.databinding.js"></script>
+
+    <script type="text/javascript">
+    var TestModel, test;
+
+	// create a new model using specified schema validation
+	TestModel = JSchema.Binding.Create({
+		"name":"Product",
+		"properties":{
+			"record_id":{
+				"type":"number",
+				"description":"Product identifier",
+				"required":true
+			},
+			"name":{
+				"description":"Name of the product",
+				"type":"string",
+				"required":true
+			},
+			"price":{
+				"required":true,
+				"type": "number",
+				"minimum":0,
+				"required":true
+			},
+			"tags":{
+				"type":"array",
+				"items":{
+					"type":"string"
+				}
+			},
+			'object_test': {
+				"type" : "object",
+				"properties" : {
+					"key":{"type":"string"},
+					"value":{"type":"string"}
+				}
+			}
+		},
+		"links":[
+			{
+				"rel":"full",
+				"href":"{record_id}"
+			},
+			{
+				"rel":"comments",
+				"href":"comments/?id={record_id}"
+			}
+		]
+    }, {idField : 'record_id'});
+
+    // create a record
+	try {
+	    test = new TestModel({
+	    	record_id : 0,
+	    	name : "test",
+	    	price : 12
+	    });
+
+	    function change(record) { console.log('changed'); }
+	    function propChange(record, val, attr) { console.log('changed attrib: ' + attr + ' -> ' + val); }
+	    function errored(record, errs) { console.log(errs); }
+
+	    test.addEvent('change', change);					// do something when the record changes
+		test.addEvent('change:name', propChange);	// do something when the 'attr2' property of the record changes
+		test.addEvent('change:object_test.key', propChange);
+		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
+
+		test.set({ name : 'feeeeeeeeeeeed' });
+		test.set({ object_test : {key : 'zomg'} });
+		test.set({ object_test : {value : 'zomgval'} });
+	} catch (e) {
+		if (e.schemaErrors) {
+			console.dir(e.schemaErrors);
+		}
+	}
+	console.dir(test.attributes);
+</script>
+</head>
+<body>
+
+</body>
+</html>
+
