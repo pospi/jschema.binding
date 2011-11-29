@@ -4,6 +4,10 @@
  * A module that can be mixed in to *any object* in order to provide it with
  * custom events. addEvent() and removeEvent() are chainable.
  *
+ * Event firing can be interrupted, like DOM events, by returning false from a
+ * callback function. Subclasses can test whether the last event firing was
+ * interrupted prematurely by checking the _lastEventCancelled property.
+ *
  *		// using jQuery to illustrate 'extend'ing since this would be complex in pure js
  *		var object = {};
  *		$.extend(object, JSchema.EventHandler);
@@ -17,6 +21,7 @@
 JSchema.EventHandler = {
 
 	_callbacks : {},
+	_lastEventCancelled : false,
 
 	/**
 	 * @param	string		ev			event name. Use "all" to bind to all events.
@@ -68,7 +73,10 @@ JSchema.EventHandler = {
 		var list, calls, ev, callback, args, executions = false;
 		var both = 2;
 		if (!(calls = this._callbacks)) return this;
-		while (both--) {
+
+		this._lastEventCancelled = false;
+
+		while (both-- && !this._lastEventCancelled) {
 			ev = both ? eventName : 'all';
 			if (list = calls[ev]) {
 				for (var i = 0, l = list.length; i < l; i++) {
@@ -76,8 +84,12 @@ JSchema.EventHandler = {
 						list.splice(i, 1); i--; l--;
 					} else {
 						args = both ? Array.prototype.slice.call(arguments, 1) : arguments;
-						callback[0].apply(callback[1] || this, args);
 						executions = true;
+						var retval = callback[0].apply(callback[1] || this, args);
+						if (retval === false) {
+							this._lastEventCancelled = true;
+							break;
+						}
 					}
 				}
 			}

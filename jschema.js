@@ -13,6 +13,10 @@
  * be achieved with the same callback as 'change', watching for the new value
  * being undefined.
  *
+ * Change events are fired in order from the deepest property modified up to
+ * the topmost. Returning false from any event callback will break this chain,
+ * in the same manner as cancelling DOM event bubbling.
+ *
  * Usage:
  *	var MyModel = JSchema.Binding.Create(
  *						jsonSchemaDefn,

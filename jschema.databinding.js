@@ -260,13 +260,16 @@
 
 					var results = JSchema._handleObjectChange(newEventStr, clone, copy);
 
-					// Never move original objects, clone them
 					oldObject[ name ] = results[0];
-					childrenChanged = true;	// tell our parent to fire modified, too
+					suppressEvent = results[2];		// cancel the events if a child callback prevented bubbling
+					childrenChanged = true;			// tell our parent to fire modified, too
 
 					// if children were modified, fire a change event for us too!
 					if (results[1] && !suppressEvent) {
 						this.fireEvent('change:' + newEventStr, this, oldObject[ name ], newEventStr);
+						if (this._lastEventCancelled) {
+							suppressEvent = true;
+						}
 					}
 				} else if (src != copy) {
 					oldObject[ name ] = copy;
@@ -275,15 +278,21 @@
 					// fire a change event for the modified property
 					if (!suppressEvent) {
 						this.fireEvent('change:' + newEventStr, this, copy, newEventStr);
+						if (this._lastEventCancelled) {
+							suppressEvent = true;
+						}
 					}
 				}
 			}
 
-			if (childrenChanged) {
+			if (childrenChanged && !suppressEvent) {
 				this.fireEvent('change:' + eventStr, this, oldObject, eventStr);
+				if (this._lastEventCancelled) {
+					suppressEvent = true;
+				}
 			}
 
-			return [oldObject, childrenChanged];
+			return [oldObject, childrenChanged, suppressEvent];
 		},
 
 		// Remove an attribute from the model, firing a "change" event
@@ -345,6 +354,9 @@
 			if (!alreadyChanging && !suppressEvent) {
 				for (attr in old) {
 					this.fireEvent('change:' + attr, this, undefined, attr);	// fire change events for all removed attributes
+					if (this._lastEventCancelled) {
+						suppressEvent = true;
+					}
 				}
 				this.change();
 			}
@@ -366,7 +378,9 @@
 		// Calling this will cause all callbacks listening to the data to run
 		change : function(options)
 		{
-			this.fireEvent('change', this);
+			if (!this._lastEventCancelled) {
+				this.fireEvent('change', this);
+			}
 			this._dirty = false;
 		},
 
