@@ -35,9 +35,9 @@
 
 	/**
 	 * Recursively extends an object's prototype with the object passed in.
-	 * This acts similarly to jQuery's extend(), except that explicitly
-	 * set 'undefined' values have the effect of unsetting values in the
-	 * original object.
+	 * This acts similarly to (and is heavily based upon) jQuery's extend(),
+	 * except that explicitly set 'undefined' values have the effect of
+	 * unsetting values in the original object.
 	 */
 	JSchema.extendAndUnset = function()
 	{
@@ -201,11 +201,17 @@
 			// Update attributes
 			for (var attr in attrs) {
 				var val = attrs[attr];
-				if (!this._isEqual(now[attr], val)) {
+				if ($.isPlainObject(now[attr]) && $.isPlainObject(val)) {	// object merging
+					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
+					now[attr] = result[0];
+					if (result[1]) {
+						this._dirty = true;
+					}
+				} else if (!this._isEqual(now[attr], val)) {				// scalar / array setting :TODO: is firing events on array key changes useful, or pointless?
 					now[attr] = val;
 					this._dirty = true;
 					if (!suppressEvent) {
-						this.fireEvent('change:' + attr, this, val, attr);	// notify that this attribute has changed
+						this.fireEvent('change:' + attr, this, val, attr);
 					}
 				}
 			}
@@ -217,6 +223,67 @@
 
 			this._changing = false;
 			return this;
+		},
+
+		/**
+		 * Handles merging of record subobjects & firing of appropriate change events
+		 *
+		 * @param	String	eventStr	Event to fire. Starts as 'change:' + the base attribute name.
+		 *                        		Subsequent recursions into the object will fire events appended
+		 *                        		with '.' + the subattribute name.
+		 * @return	2-length array of the merged object, and a boolean indicating whether subproperties were modified.
+		 */
+		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent)
+		{
+			var childrenChanged = false;
+
+			for ( name in newObject ) {
+				src = oldObject[ name ];
+				copy = newObject[ name ];
+
+				// Prevent never-ending loop
+				if ( oldObject === copy ) {
+					continue;
+				}
+
+				// make a new string to fire an event for this child changing
+				var newEventStr = eventStr + '.' + name;
+
+				// Recurse if we're merging plain objects or arrays
+				if ( copy && ( $.isPlainObject(copy) || (copyIsArray = $.isArray(copy)) ) ) {	/* LIBCOMPAT */
+					if ( copyIsArray ) {
+						copyIsArray = false;
+						clone = src && $.isArray(src) ? src : [];	/* LIBCOMPAT */
+					} else {
+						clone = src && $.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
+					}
+
+					var results = JSchema._handleObjectChange(newEventStr, clone, copy);
+
+					// Never move original objects, clone them
+					oldObject[ name ] = results[0];
+					childrenChanged = true;	// tell our parent to fire modified, too
+
+					// if children were modified, fire a change event for us too!
+					if (results[1] && !suppressEvent) {
+						this.fireEvent('change:' + newEventStr, this, oldObject[ name ], newEventStr);
+					}
+				} else if (src != copy) {
+					oldObject[ name ] = copy;
+					childrenChanged = true;	// tell our parent to fire modified, too
+
+					// fire a change event for the modified property
+					if (!suppressEvent) {
+						this.fireEvent('change:' + newEventStr, this, copy, newEventStr);
+					}
+				}
+			}
+
+			if (childrenChanged) {
+				this.fireEvent('change:' + eventStr, this, oldObject, eventStr);
+			}
+
+			return [oldObject, childrenChanged];
 		},
 
 		// Remove an attribute from the model, firing a "change" event

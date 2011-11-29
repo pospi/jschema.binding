@@ -8,6 +8,11 @@
  * recieve updates / notifications when that data is modified. JSON schemas
  * are passed to new data model definitions to automatically validate data.
  *
+ * The event engine implements only two types of events: change and error.
+ * To cut down on callback registers, monitoring unsetting of properties can
+ * be achieved with the same callback as 'change', watching for the new value
+ * being undefined.
+ *
  * Usage:
  *	var MyModel = JSchema.Binding.Create(
  *						jsonSchemaDefn,
