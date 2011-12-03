@@ -123,12 +123,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		    outputLine('error', errs);
 		}
 		// a particular property of the object changes
-	    function propChange(record, val, attr) {
-		    outputLine('changed attrib:', attr, '->', val);
+	    function propChange(record, oldval, newval, attr, eventName) {
+		    outputLine('event(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
 		}
 		// this callback will prevent parent property change events from executing as well
-	    function propChangeNoBubble(record, val, attr) {
-		    outputLine('changed attrib:', attr, '->', val);
+	    function propChangeNoBubble(record, oldval, newval, attr, eventName) {
+		    outputLine('event(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
 		    return false;
 		}
 	    //-------------------------------------------------------------

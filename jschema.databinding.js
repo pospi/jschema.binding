@@ -219,11 +219,11 @@
 						this._dirty = true;
 					}
 				} else if (!this._isEqual(now[attr], val)) {						// scalar property setting
-					now[attr] = val;
 					this._dirty = true;
 					if (!suppressEvent) {
-						this.fireEvent('change:' + attr, this, val, attr);
+						suppressEvent = this._propertyChange(attr, now[attr], val, attr);
 					}
+					now[attr] = val;
 				}
 			}
 
@@ -255,13 +255,14 @@
 
 			this._previousAttributes = this.getAttributes();
 
-			// Remove the attribute
+			// Remove the attribute but keep it for the event
+			var oldValue = this.attributes[attr];
 			delete this.attributes[attr];
 			this._dirty = true;
 
 			// Fire "change" events if desired
 			if (!alreadyChanging && !suppressEvent) {
-				this.fireEvent('change:' + attr, this, undefined, attr);	// fire a change event for the attribute removed
+				suppressEvent = this._propertyChange(attr, oldValue, undefined, attr);	// fire a change event for the attribute removed
 				this.change();
 			}
 
@@ -294,10 +295,7 @@
 
 			if (!alreadyChanging && !suppressEvent) {
 				for (attr in old) {
-					this.fireEvent('change:' + attr, this, undefined, attr);	// fire change events for all removed attributes
-					if (this._lastEventCancelled) {
-						suppressEvent = true;
-					}
+					suppressEvent = this._propertyChange(attr, old[attr], undefined, attr);	// fire change events for all removed attributes
 				}
 				this.change();
 			}
@@ -327,6 +325,20 @@
 
 		//=============================================================================================
 		//	Internals
+
+		/**
+		 * Fire a change event for one of the record's properties changing
+		 * @param  {string} propertyString name of the property changed (dot notation)
+		 * @param  {mixed} oldValue		value of the attribute before the change
+		 * @param  {mixed} newValue		new value of the attribute currently in the object
+		 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
+		 * @return {bool} whether the event was cancelled prematurely
+		 */
+		_propertyChange : function(propertyString, oldValue, newValue, attrIndex)
+		{
+			this.fireEvent('change:' + propertyString, this, oldValue, newValue, attrIndex, propertyString);
+			return this._lastEventCancelled;
+		},
 
 		/**
 		 * Converts a serverside response into the hash of attributes to be set on
@@ -374,6 +386,12 @@
 		{
 			var childrenChanged = false;
 
+			// store a copy of the object prior to modification so that we can return the old one in a change event
+			var previousObject = {};
+			if (!suppressEvent) {
+				JSchema.extendAndUnset(previousObject, oldObject);
+			}
+
 			for ( name in newObject ) {
 				src = oldObject[ name ];
 				copy = newObject[ name ];
@@ -403,10 +421,7 @@
 
 					// if children were modified, fire a change event for us too!
 					if (results[1] && !suppressEvent) {
-						this.fireEvent('change:' + newEventStr, this, oldObject[ name ], newEventStr);
-						if (this._lastEventCancelled) {
-							suppressEvent = true;
-						}
+						suppressEvent = this._propertyChange(newEventStr, src, oldObject[name], newEventStr);
 					}
 				} else if (src != copy) {
 					oldObject[ name ] = copy;
@@ -414,19 +429,17 @@
 
 					// fire a change event for the modified property
 					if (!suppressEvent) {
-						this.fireEvent('change:' + newEventStr, this, copy, newEventStr);
-						if (this._lastEventCancelled) {
-							suppressEvent = true;
+						suppressEvent = this._propertyChange(newEventStr, src, copy, newEventStr);
+						// fire a wildcard change event too if one is registered
+						if (!suppressEvent && (jQuery.isPlainObject(oldObject) || jQuery.isArray(oldObject))) {
+							suppressEvent = this._propertyChange(eventStr + '.*', src, copy, newEventStr);
 						}
 					}
 				}
 			}
 
 			if (childrenChanged && !suppressEvent) {
-				this.fireEvent('change:' + eventStr, this, oldObject, eventStr);
-				if (this._lastEventCancelled) {
-					suppressEvent = true;
-				}
+				suppressEvent = this._propertyChange(eventStr, previousObject, oldObject, eventStr);
 			}
 
 			return [oldObject, childrenChanged, suppressEvent];
