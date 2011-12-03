@@ -29,8 +29,10 @@
  	 * @param object attrs   initial attributes for this data record
  	 * @param object schema  JSON schema document for validation, as a javascript object
  	 * @param object options options for this validator:
- 	 *                       - idField: 	key name of the object's attributes to use to determine record uniqueness. Defaults to 'id'.
- 	 *                       -
+	 *                     - idField: 			key name of the object's attributes to use to
+	 *                     						determine record uniqueness. Defaults to 'id'.
+	 *                     - skipCreateEvents:	if true, don't fire any events while constructing this
+	 *                     						object. Defaults to false.
  	 */
 	JSchema.Binding = function(attrs, schema, options)
 	{
@@ -40,7 +42,8 @@
 		this.idField = options.idField || 'id';
 
 		// set initial attributes
-		this.set(attrs);
+		var noEvents = !!options.skipCreateEvents;
+		this.set(attrs, noEvents);
 	};
 
 	/**
