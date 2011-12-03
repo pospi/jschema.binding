@@ -33,13 +33,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			console.log.apply(console.log, arguments);
 		}
 		var args = Array.prototype.slice.call(arguments, 0, arguments.length);
-		var string = args.shift();
+		var string = '';
 		while (args.length) {
 			if (typeof args[0] == 'string' || typeof args[0] == 'number') {
 				string += ' ' + args.shift();
 			} else {
-				string += ' <span>[see console]</span>';
-				args.shift()
+				string += ' <pre>' + JSON.stringify(args.shift(), undefined, ' ') + '</pre>';
 			}
 		}
 		logEl.append(jQuery('<div class="clearfix">' 			/* LIBCOMPAT */
@@ -153,14 +152,20 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		test.addEvent('change:object_test.noBubble', propChangeNoBubble);	// this callback prevents parent events from firing when this property changes
 		test.addEvent('change:tags', propChange);			// do something when this array changes
 		test.addEvent('change:tags.1', propChange);			// do something when this particular element of an array changes
+		test.addEvent('change:categories', propChange);
 		test.addEvent('change:categories.*', propChange);	// do something when any element in the array changes
 		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
 
-		outputHeader("Initialising name");
+		outputHeader("Setting name");
 		test.set({ name : 'feeeeeeeeeeeed' });
 
 		outputHeader("Initialising object_test");
 		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
+
+		outputHeader("Getter tests");
+		outputLine('name =', test.get('name'));
+		outputLine('object_test =', test.get('object_test'));
+		outputLine('object_test.key =', test.get('object_test.key'));
 
 		outputHeader("Changing object_test.key");
 		test.set({ object_test : {key : 'zomg'} });
@@ -184,7 +189,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		test.set({ categories : [12, 6, 3] });
 
 		outputHeader("Changing & adding to categories array");
-		test.set({ categories : [10, 9, 7, 12] });
+		test.set({ categories : [10, 9, 3, 12] });
 
 		outputHeader("Subtracting from categories array");
 		test.set({ categories : [10, 9] });
@@ -200,7 +205,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 });
 </script>
 <style type="text/css">
-	.output div {
+	.output > div {
 		width: 70%;
 		margin: 0 auto;
 		border: 0 1px solid #EEE;
@@ -210,10 +215,19 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	.output div div {
 		margin: 0.3em 1.5em;
+		border-bottom: 1px solid #DDD;
 	}
 	.output div div span {
 		color: #998;
 		font-weight: bold;
+	}
+	.output div pre {
+		display: inline-block;
+		vertical-align: middle;
+		background: #DDD;
+		margin: 0;
+		padding: 0.2em;
+		border-radius: 0.5em;
 	}
 	body {
 		font-family: helvetica, arial, sans-serif;
@@ -225,7 +239,6 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		display: block;
 		float: left;
 		color: #000;
-		border-bottom: 1px solid #AAA;
 		padding: 1em 0 0.2em 0;
 	}
 	/* Contain floats: nicolasgallagher.com/micro-clearfix-hack/ */
