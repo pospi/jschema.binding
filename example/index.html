@@ -30,7 +30,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	function outputLine()
 	{
 		if (typeof console != 'undefined' && typeof console.log != 'undefined') {
-			console.log(arguments);
+			console.log.apply(console.log, arguments);
 		}
 		var args = Array.prototype.slice.call(arguments, 0, arguments.length);
 		var string = args.shift();
@@ -48,7 +48,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	function outputHeader()
 	{
-		arguments[0] = '<b>' + arguments[0] + '</b>';
+		arguments[0] = '<b>---- ' + arguments[0] + ' ----</b>';
 		return outputLine.apply(this, arguments);
 	}
 	//----------------------------------------------------
@@ -77,6 +77,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 				"required":true
 			},
 			"tags":{
+				"type":"array",
+				"items":{
+					"type":"number"
+				}
+			},
+			"categories":{
 				"type":"array",
 				"items":{
 					"type":"number"
@@ -140,13 +146,14 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	    test.addEvent('change', change);					// do something when the record changes
 		test.addEvent('change:name', propChange);			// do something when the 'name' property of the record changes
-		test.addEvent('change:object_test', propChange);
-		test.addEvent('change:object_test.key', propChange);
+		test.addEvent('change:object_test', propChange);	// do something when this subobject is modified
+		test.addEvent('change:object_test.key', propChange);	// do something when this property of a subobject is modified
 		test.addEvent('change:object_test.value', propChange);
 		test.addEvent('change:object_test.anotherValue', propChange);
-		test.addEvent('change:object_test.noBubble', propChangeNoBubble);
-		test.addEvent('change:tags', propChange);
-		test.addEvent('change:tags.1', propChange);
+		test.addEvent('change:object_test.noBubble', propChangeNoBubble);	// this callback prevents parent events from firing when this property changes
+		test.addEvent('change:tags', propChange);			// do something when this array changes
+		test.addEvent('change:tags.1', propChange);			// do something when this particular element of an array changes
+		test.addEvent('change:categories.*', propChange);	// do something when any element in the array changes
 		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
 
 		outputHeader("Initialising name");
@@ -164,11 +171,23 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		outputHeader("Changing object_test.noBubble with a callback registered to prevent event propagation");
 		test.set({ object_test : {noBubble : 13556} });
 
+		outputHeader("Unsetting object_test.value");
+		test.set({ object_test : {value : undefined} });
+
 		outputHeader("Initialising tags array");
 		test.set({ tags : [12, 6, 3] });
 
 		outputHeader("Changing tags array");
 		test.set({ tags : [12, 8, 3] });
+
+		outputHeader("Initialising categories array");
+		test.set({ categories : [12, 6, 3] });
+
+		outputHeader("Changing & adding to categories array");
+		test.set({ categories : [10, 9, 7, 12] });
+
+		outputHeader("Subtracting from categories array");
+		test.set({ categories : [10, 9] });
 	} catch (e) {
 		if (e.schemaErrors) {
 			outputHeader("uncaught exception", e);
