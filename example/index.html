@@ -145,6 +145,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		test.addEvent('change:object_test.value', propChange);
 		test.addEvent('change:object_test.anotherValue', propChange);
 		test.addEvent('change:object_test.noBubble', propChangeNoBubble);
+		test.addEvent('change:tags', propChange);
+		test.addEvent('change:tags.1', propChange);
 		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
 
 		outputHeader("Initialising name");

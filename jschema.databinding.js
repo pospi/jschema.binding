@@ -211,13 +211,14 @@
 			// Update attributes
 			for (var attr in attrs) {
 				var val = attrs[attr];
-				if (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val)) {	// object merging
+				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val))
+				  || (jQuery.isArray(now[attr]) && jQuery.isArray(val)) ) {			// object merging & array modification
 					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
 					now[attr] = result[0];
 					if (result[1]) {
 						this._dirty = true;
 					}
-				} else if (!this._isEqual(now[attr], val)) {				// scalar / array setting :TODO: is firing events on array key changes useful, or pointless?
+				} else if (!this._isEqual(now[attr], val)) {						// scalar property setting
 					now[attr] = val;
 					this._dirty = true;
 					if (!suppressEvent) {
