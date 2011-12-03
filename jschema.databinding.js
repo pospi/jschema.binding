@@ -390,6 +390,9 @@
 			// store a copy of the object prior to modification so that we can return the old one in a change event
 			var previousObject = {};
 			if (!suppressEvent) {
+				if (jQuery.isArray(oldObject)) {
+					previousObject = [];
+				}
 				JSchema.extendAndUnset(previousObject, oldObject);
 			}
 
