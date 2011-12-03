@@ -22,6 +22,16 @@
  * @depends		json2.js		https://github.com/douglascrockford/JSON-js, required for older browsers only
  * @author		pospi	<pospi@spadgos.com>
  */
+
+ 	/**
+ 	 * Creates a new JSchema.Binding instance, aka a data record, aka object instance
+ 	 *
+ 	 * @param object attrs   initial attributes for this data record
+ 	 * @param object schema  JSON schema document for validation, as a javascript object
+ 	 * @param object options options for this validator:
+ 	 *                       - idField: 	key name of the object's attributes to use to determine record uniqueness. Defaults to 'id'.
+ 	 *                       -
+ 	 */
 	JSchema.Binding = function(attrs, schema, options)
 	{
 		this.schema = schema;
@@ -47,7 +57,7 @@
 			length = arguments.length;
 
 		// Handle case when target is a string or something (possible in deep copy)
-		if ( typeof target !== "object" && !$.isFunction(target) ) {	/* LIBCOMPAT */
+		if ( typeof target !== "object" && !jQuery.isFunction(target) ) {	/* LIBCOMPAT */
 			target = {};
 		}
 
@@ -65,12 +75,12 @@
 					}
 
 					// Recurse if we're merging plain objects or arrays
-					if ( copy && ( $.isPlainObject(copy) || (copyIsArray = $.isArray(copy)) ) ) {	/* LIBCOMPAT */
+					if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
 						if ( copyIsArray ) {
 							copyIsArray = false;
-							clone = src && $.isArray(src) ? src : [];	/* LIBCOMPAT */
+							clone = src && jQuery.isArray(src) ? src : [];	/* LIBCOMPAT */
 						} else {
-							clone = src && $.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
+							clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 						}
 
 						// Never move original objects, clone them
@@ -201,7 +211,7 @@
 			// Update attributes
 			for (var attr in attrs) {
 				var val = attrs[attr];
-				if ($.isPlainObject(now[attr]) && $.isPlainObject(val)) {	// object merging
+				if (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val)) {	// object merging
 					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
 					now[attr] = result[0];
 					if (result[1]) {
@@ -223,76 +233,6 @@
 
 			this._changing = false;
 			return this;
-		},
-
-		/**
-		 * Handles merging of record subobjects & firing of appropriate change events
-		 *
-		 * @param	String	eventStr	Event to fire. Starts as 'change:' + the base attribute name.
-		 *                        		Subsequent recursions into the object will fire events appended
-		 *                        		with '.' + the subattribute name.
-		 * @return	2-length array of the merged object, and a boolean indicating whether subproperties were modified.
-		 */
-		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent)
-		{
-			var childrenChanged = false;
-
-			for ( name in newObject ) {
-				src = oldObject[ name ];
-				copy = newObject[ name ];
-
-				// Prevent never-ending loop
-				if ( oldObject === copy ) {
-					continue;
-				}
-
-				// make a new string to fire an event for this child changing
-				var newEventStr = eventStr + '.' + name;
-
-				// Recurse if we're merging plain objects or arrays
-				if ( copy && ( $.isPlainObject(copy) || (copyIsArray = $.isArray(copy)) ) ) {	/* LIBCOMPAT */
-					if ( copyIsArray ) {
-						copyIsArray = false;
-						clone = src && $.isArray(src) ? src : [];	/* LIBCOMPAT */
-					} else {
-						clone = src && $.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
-					}
-
-					var results = JSchema._handleObjectChange(newEventStr, clone, copy);
-
-					oldObject[ name ] = results[0];
-					suppressEvent = results[2];		// cancel the events if a child callback prevented bubbling
-					childrenChanged = true;			// tell our parent to fire modified, too
-
-					// if children were modified, fire a change event for us too!
-					if (results[1] && !suppressEvent) {
-						this.fireEvent('change:' + newEventStr, this, oldObject[ name ], newEventStr);
-						if (this._lastEventCancelled) {
-							suppressEvent = true;
-						}
-					}
-				} else if (src != copy) {
-					oldObject[ name ] = copy;
-					childrenChanged = true;	// tell our parent to fire modified, too
-
-					// fire a change event for the modified property
-					if (!suppressEvent) {
-						this.fireEvent('change:' + newEventStr, this, copy, newEventStr);
-						if (this._lastEventCancelled) {
-							suppressEvent = true;
-						}
-					}
-				}
-			}
-
-			if (childrenChanged && !suppressEvent) {
-				this.fireEvent('change:' + eventStr, this, oldObject, eventStr);
-				if (this._lastEventCancelled) {
-					suppressEvent = true;
-				}
-			}
-
-			return [oldObject, childrenChanged, suppressEvent];
 		},
 
 		// Remove an attribute from the model, firing a "change" event
@@ -421,7 +361,78 @@
 			return true;
 		},
 
-		_isEqual : function(a, b) 		// mostly taken from Underscore.js isEqual()
+		/**
+		 * Handles merging of record subobjects & firing of appropriate change events
+		 *
+		 * @param	String	eventStr	Event to fire. Starts as 'change:' + the base attribute name.
+		 *                        		Subsequent recursions into the object will fire events appended
+		 *                        		with '.' + the subattribute name.
+		 * @return	2-length array of the merged object, and a boolean indicating whether subproperties were modified.
+		 */
+		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent)
+		{
+			var childrenChanged = false;
+
+			for ( name in newObject ) {
+				src = oldObject[ name ];
+				copy = newObject[ name ];
+
+				// Prevent never-ending loop
+				if ( oldObject === copy ) {
+					continue;
+				}
+
+				// make a new string to fire an event for this child changing
+				var newEventStr = eventStr + '.' + name;
+
+				// Recurse if we're merging plain objects or arrays
+				if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
+					if ( copyIsArray ) {
+						copyIsArray = false;
+						clone = src && jQuery.isArray(src) ? src : [];	/* LIBCOMPAT */
+					} else {
+						clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
+					}
+
+					var results = JSchema._handleObjectChange(newEventStr, clone, copy);
+
+					oldObject[ name ] = results[0];
+					suppressEvent = results[2];		// cancel the events if a child callback prevented bubbling
+					childrenChanged = true;			// tell our parent to fire modified, too
+
+					// if children were modified, fire a change event for us too!
+					if (results[1] && !suppressEvent) {
+						this.fireEvent('change:' + newEventStr, this, oldObject[ name ], newEventStr);
+						if (this._lastEventCancelled) {
+							suppressEvent = true;
+						}
+					}
+				} else if (src != copy) {
+					oldObject[ name ] = copy;
+					childrenChanged = true;	// tell our parent to fire modified, too
+
+					// fire a change event for the modified property
+					if (!suppressEvent) {
+						this.fireEvent('change:' + newEventStr, this, copy, newEventStr);
+						if (this._lastEventCancelled) {
+							suppressEvent = true;
+						}
+					}
+				}
+			}
+
+			if (childrenChanged && !suppressEvent) {
+				this.fireEvent('change:' + eventStr, this, oldObject, eventStr);
+				if (this._lastEventCancelled) {
+					suppressEvent = true;
+				}
+			}
+
+			return [oldObject, childrenChanged, suppressEvent];
+		},
+
+		// mostly taken from Underscore.js isEqual()
+		_isEqual : function(a, b)
 		{
 			// Check object identity.
 			if (a === b) return true;
