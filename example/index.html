@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>JSchema.Binding event tests</title>
 
-    <!-- jQuery -->
+    <!-- jQuery /* LIBCOMPAT (denotes a jQuery-specific build line) */ -->
 	<script type="text/javascript" src="../lib/jquery-1.7.1.min.js"></script>
 
     <!-- JSON (where required) -->
@@ -22,7 +22,39 @@
 	<script type="text/javascript" src="../jschema.databinding.js"></script>
 
     <script type="text/javascript">
-    var TestModel, test;
+jQuery(document).ready(function() {			/* LIBCOMPAT */
+
+	//----------------------------------------------------
+	// debugging output functions
+	var logEl = jQuery('#testoutput div');		/* LIBCOMPAT */
+	function outputLine()
+	{
+		if (typeof console != 'undefined' && typeof console.log != 'undefined') {
+			console.log(arguments);
+		}
+		var args = Array.prototype.slice.call(arguments, 0, arguments.length);
+		var string = args.shift();
+		while (args.length) {
+			if (typeof args[0] == 'string' || typeof args[0] == 'number') {
+				string += ' ' + args.shift();
+			} else {
+				string += ' <span>[see console]</span>';
+				args.shift()
+			}
+		}
+		logEl.append(jQuery('<div class="clearfix">' 			/* LIBCOMPAT */
+						+ string
+						+ '</div>'));
+	}
+	function outputHeader()
+	{
+		arguments[0] = '<b>' + arguments[0] + '</b>';
+		return outputLine.apply(this, arguments);
+	}
+	//----------------------------------------------------
+
+    var TestModel,	// data model. This is your object 'class'.
+    	test;		// data record. This is your 'class instance'.
 
 	// create a new model using specified schema validation
 	TestModel = JSchema.Binding.Create({
@@ -47,14 +79,16 @@
 			"tags":{
 				"type":"array",
 				"items":{
-					"type":"string"
+					"type":"number"
 				}
 			},
 			'object_test': {
 				"type" : "object",
 				"properties" : {
 					"key":{"type":"string"},
-					"value":{"type":"string"}
+					"value":{"type":"string"},
+					"anotherValue":{"type":"number"},
+					"noBubble":{"type":"number"}
 				}
 			}
 		},
@@ -72,34 +106,119 @@
 
     // create a record
 	try {
+	    //-------------------------------------------------------------
+	    // Some callbacks to test the object's events
+
+	    // object is modified
+	    function change(record) {
+		    outputLine('changed');
+		}
+		// object modification was rejected as it did not pass validation
+	    function errored(record, errs) {
+		    outputLine('error', errs);
+		}
+		// a particular property of the object changes
+	    function propChange(record, val, attr) {
+		    outputLine('changed attrib:', attr, '->', val);
+		}
+		// this callback will prevent parent property change events from executing as well
+	    function propChangeNoBubble(record, val, attr) {
+		    outputLine('changed attrib:', attr, '->', val);
+		    return false;
+		}
+	    //-------------------------------------------------------------
+
+	    // Create a new data record
 	    test = new TestModel({
 	    	record_id : 0,
 	    	name : "test",
 	    	price : 12
 	    });
 
-	    function change(record) { console.log('changed'); }
-	    function propChange(record, val, attr) { console.log('changed attrib: ' + attr + ' -> ' + val); }
-	    function errored(record, errs) { console.log(errs); }
+	    outputHeader('New data object instance vars & schema:');
+	    outputLine(test.getAll(), test.schema);
 
 	    test.addEvent('change', change);					// do something when the record changes
-		test.addEvent('change:name', propChange);	// do something when the 'attr2' property of the record changes
+		test.addEvent('change:name', propChange);			// do something when the 'name' property of the record changes
+		test.addEvent('change:object_test', propChange);
 		test.addEvent('change:object_test.key', propChange);
+		test.addEvent('change:object_test.value', propChange);
+		test.addEvent('change:object_test.anotherValue', propChange);
+		test.addEvent('change:object_test.noBubble', propChangeNoBubble);
 		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
 
+		outputHeader("Initialising name");
 		test.set({ name : 'feeeeeeeeeeeed' });
+
+		outputHeader("Initialising object_test");
+		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
+
+		outputHeader("Changing object_test.key");
 		test.set({ object_test : {key : 'zomg'} });
-		test.set({ object_test : {value : 'zomgval'} });
+
+		outputHeader("Changing object_test.value and object_test.anotherValue");
+		test.set({ object_test : {value : 'zomgval', anotherValue : 13556} });
+
+		outputHeader("Changing object_test.noBubble with a callback registered to prevent event propagation");
+		test.set({ object_test : {noBubble : 13556} });
+
+		outputHeader("Initialising tags array");
+		test.set({ tags : [12, 6, 3] });
+
+		outputHeader("Changing tags array");
+		test.set({ tags : [12, 8, 3] });
 	} catch (e) {
 		if (e.schemaErrors) {
-			console.dir(e.schemaErrors);
-		}
+			outputHeader("uncaught exception", e);
+			if (typeof e.schemaErrors != 'undefined' && typeof console != 'undefined' && typeof console.dir != 'undefined') console.dir(e.schemaErrors);
+		} else
+		if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log(e);
 	}
-	console.dir(test.attributes);
+	if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log('Final object is:');
+	if (typeof console != 'undefined' && typeof console.dir != 'undefined') console.dir(test.attributes);
+});
 </script>
+<style type="text/css">
+	.output div {
+		width: 70%;
+		margin: 0 auto;
+		border: 0 1px solid #EEE;
+		background: #EFEFEF;
+		color: #444;
+		font-family: monospace;
+	}
+	.output div div {
+		margin: 0.3em 1.5em;
+	}
+	.output div div span {
+		color: #998;
+		font-weight: bold;
+	}
+	body {
+		font-family: helvetica, arial, sans-serif;
+	}
+	h1 {
+		font-size: 1.5em;
+	}
+	b {
+		display: block;
+		float: left;
+		color: #000;
+		border-bottom: 1px solid #AAA;
+		padding: 1em 0 0.2em 0;
+	}
+	/* Contain floats: nicolasgallagher.com/micro-clearfix-hack/ */
+	.clearfix:before, .clearfix:after { content: ""; display: table; }
+	.clearfix:after { clear: both; }
+	.clearfix { zoom: 1; }
+</style>
 </head>
 <body>
-
+	<div class="output" id="testoutput">
+		<h1>JSchema.Binding example</h1>
+		<p>See console for detailed output</p>
+		<div></div>
+	</div>
 </body>
 </html>
 
