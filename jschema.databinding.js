@@ -345,18 +345,6 @@
 		},
 
 		/**
-		 * Converts a serverside response into the hash of attributes to be set on
-		 * the model. The default implementation is to decode the response as JSON
-		 * and pass it along.
-		 *
-		 * :TODO: allow overriding this method for new models in Binding.Create()
-		 */
-		parse : function(resp, xhr)
-		{
-			return JSON.decode(resp);
-		},
-
-		/**
 		 * Run schema validation against a set of incoming attributes, returning true
 		 * if all is well. If any errors are found, the error result object of the JSON schema
 		 * validator is sent to any error callbacks registered.

@@ -38,7 +38,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			if (typeof args[0] == 'string' || typeof args[0] == 'number') {
 				string += ' ' + args.shift();
 			} else {
-				string += ' <pre>' + JSON.stringify(args.shift(), undefined, ' ') + '</pre>';
+				string += ' <pre>' + JSON.stringify(args.shift(), undefined, '  ') + '</pre>';
 			}
 		}
 		logEl.append(jQuery('<div class="clearfix">' 			/* LIBCOMPAT */
@@ -52,8 +52,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	//----------------------------------------------------
 
-    var TestModel,	// data model. This is your object 'class'.
-    	test;		// data record. This is your 'class instance'.
+    var TestModel,		// data model. This is your object 'class'.
+    	test, test2;	// data records. This is your 'class instance'.
 
 	// create a new model using specified schema validation
 	TestModel = JSchema.Binding.Create({
@@ -124,27 +124,32 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		}
 		// a particular property of the object changes
 	    function propChange(record, oldval, newval, attr, eventName) {
-		    outputLine('event(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
+		    outputLine('change(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
 		}
 		// this callback will prevent parent property change events from executing as well
 	    function propChangeNoBubble(record, oldval, newval, attr, eventName) {
-		    outputLine('event(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
+		    outputLine('change(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
 		    return false;
 		}
 	    //-------------------------------------------------------------
 
-	    // Create a new data record
+	    outputHeader('Binding \'change\' and \'change:name\' for all records...');
+
+	    // We can bind events to every instance of a model...
+	    // (note that this must be done prior to creating records for them to inherit these base events)
+	    TestModel.prototype.addEvent('change', change);				// do something when any record changes
+		TestModel.prototype.addEvent('change:name', propChange);	// do something when the 'name' property of any record changes
+
+	    // ...or we can create a new data record...
+	    outputHeader('New data object');
 	    test = new TestModel({
 	    	record_id : 0,
 	    	name : "test",
 	    	price : 12
-	    });
+	    })
+		outputLine('record constructed:', test.getAll());
 
-	    outputHeader('New data object instance vars & schema:');
-	    outputLine(test.getAll(), test.schema);
-
-	    test.addEvent('change', change);					// do something when the record changes
-		test.addEvent('change:name', propChange);			// do something when the 'name' property of the record changes
+	    // ...and bind events to that specific instance.
 		test.addEvent('change:object_test', propChange);	// do something when this subobject is modified
 		test.addEvent('change:object_test.key', propChange);	// do something when this property of a subobject is modified
 		test.addEvent('change:object_test.value', propChange);
@@ -158,6 +163,20 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 		outputHeader("Setting name");
 		test.set({ name : 'feeeeeeeeeeeed' });
+
+		// See here how the same setter fires less events for this object since it
+		// doesn't have an extra change event bound to it
+		outputHeader("Second data record with an instance change event bound in addition to the model's event");
+		test2 = new TestModel({
+			record_id : 1,
+			name : "test2",
+			price : 12
+		})
+		outputLine('record constructed:', test2.getAll());
+		test2.addEvent('change:name', propChange);				// do something in addition to the model's change event when this record changes
+
+		outputHeader("Setting name on the second record");
+		test2.set({ name : 'feeeeeeeeeeeed' });
 
 		outputHeader("Initialising object_test");
 		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
