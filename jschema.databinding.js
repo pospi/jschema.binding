@@ -497,7 +497,12 @@
 		var ctor = function(attrs) {
 			JSchema.Binding.call(this, attrs, schema, options);
 		};
+
+		// add methods
 		JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
+
+		// add some alias methods
+		ctor.prototype.getAll = ctor.prototype.getAttributes;
 
 		return ctor;
 	};
