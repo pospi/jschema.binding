@@ -219,11 +219,12 @@
 						this._dirty = true;
 					}
 				} else if (!this._isEqual(now[attr], val)) {						// scalar property setting
+					var oldVal = now[attr];
+					now[attr] = val;
 					this._dirty = true;
 					if (!suppressEvent) {
-						suppressEvent = this._propertyChange(attr, now[attr], val, attr);
+						suppressEvent = this._propertyChange(attr, oldVal, val, attr);
 					}
-					now[attr] = val;
 				}
 			}
 
