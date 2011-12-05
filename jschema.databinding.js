@@ -70,7 +70,7 @@
 		// Determine whether we have an attribute
 		has : function(attr)
 		{
-			return this.attributes[attr] != null;
+			return JSchema.dotSearchObject(this.attributes, attr) != null;
 		},
 
 		// Get the value of an attribute.
@@ -94,7 +94,7 @@
 		hasChanged : function(attr)
 		{
 			if (attr) {
-				return this._previousAttributes[attr] != this.attributes[attr];
+				return JSchema.dotSearchObject(this._previousAttributes, attr) != JSchema.dotSearchObject(this.attributes, attr);
 			}
 			return this._dirty;
 		},
@@ -103,7 +103,7 @@
 		getPrevious : function(attr)
 		{
 			if (!attr || !this._previousAttributes) return null;
-			return this._previousAttributes[attr];
+			return JSchema.dotSearchObject(this._previousAttributes, attr);
 		},
 
 		/**
@@ -192,30 +192,36 @@
 		// Remove an attribute from the model, firing a "change" event
 		unset : function(attr, suppressEvent)
 		{
-			if (!(attr in this.attributes)) return this;
-			var value = this.attributes[attr];
+			// Create an object with the previous attribute set to modify and validate with
+			var tempAttrs = this.getAttributes();
 
-			// Create a hash with the attribute set to undefined to validate with
-			var unsetHash = {};
-			unsetHash[attr] = undefined;
-			if (!this.validate(unsetHash)) {
-				return false;
+			// Search temporary object for the property to remove
+			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+			if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
+			var parent = searchResult[0];
+			var value = parent[searchResult[1]];
+			var path = searchResult[2];
+
+			// remove the property from the original temp object by reference
+			delete parent[searchResult[1]];
+			if (!this.validate(tempAttrs)) {
+				// if the new attributes don't pass validation, abort. No need to return
+				// a failure case since an error callback is mandatory.
+				return this;
 			}
 
 			// Flag that change events are being fired
 			var alreadyChanging = this._changing;
 			this._changing = true;
 
+			// copy over our current attributes to the previous
 			this._previousAttributes = this.getAttributes();
-
-			// Remove the attribute but keep it for the event
-			var oldValue = this.attributes[attr];
-			delete this.attributes[attr];
-			this._dirty = true;
+			this.attributes = tempAttrs;
 
 			// Fire "change" events if desired
 			if (!alreadyChanging && !suppressEvent) {
-				suppressEvent = this._propertyChange(attr, oldValue, undefined, attr);	// fire a change event for the attribute removed
+				suppressEvent = this._propertyChange(path, value, undefined, path);	// fire a change event for the attribute removed
+				// :TODO: bubble events up
 				this.change();
 			}
 

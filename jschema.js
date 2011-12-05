@@ -109,25 +109,41 @@ var JSchema = {
 
 	/**
 	 * Retrieve a property in a JavaScript object by using
-	 * dot notation to index child members
+	 * dot notation to index child members.
+	 * When used without returnParent=true, returns the property specified.
+	 * When used with, returns an array of:
+	 * 			- the parent element of the subproperty
+	 * 			- the key of the target element inside it
+	 * 			- the path of the parent element in the hierarchy
+	 *
 	 * @param  {object} target (nested) object to retrieve a property from
 	 * @param  {string} attr   dot-notated string property to get (eg. 'myObject.subObject.childValue')
+	 * @param  {bool}	returnParent	if true, return the parent of the matched variable instead of itself
 	 * @return {mixed}
 	 */
-	dotSearchObject : function(target, attr)
+	dotSearchObject : function(target, attr, returnParent)
 	{
-		var parts = attr.split('.'),
-			key;
+		var parts = attr.split('.'),	// keys to index, in order
+			prevTarget,					// used to return match's parent node
+			currentPath = [],			// current path of the search
+			cannotMatch = false,		// abort early if we can't recurse deep enough
+			key;						// current key we are searching
 		while (parts.length) {
 			key = parts.shift();
 			if (typeof target[key] == 'undefined'
 			|| !(jQuery.isArray(target) || jQuery.isPlainObject(target))) {	/* LIBCOMPAT */
+				cannotMatch = true;
 				break;
 			}
+			currentPath.push(key);
+			prevTarget = target;
 			target = target[key];
 		}
-		if (parts.length) {		// wasn't found
-			return undefined;
+		if (parts.length || cannotMatch) {		// wasn't found
+			return returnParent ? [undefined, key, currentPath.join('.')] : undefined;
+		}
+		if (returnParent) {
+			return [prevTarget, key, currentPath.join('.')];
 		}
 		return target;
 	}
