@@ -378,10 +378,13 @@
 		{
 			var childrenChanged = false;
 
+			// if the existing object was an array, we wil need to check its length after updating
+			var previousIsArray = jQuery.isArray(oldObject);	/* LIBCOMPAT */
+
 			// store a copy of the object prior to modification so that we can return the old one in a change event
 			var previousObject = {};
 			if (!suppressEvent) {
-				if (jQuery.isArray(oldObject)) {
+				if (previousIsArray) {
 					previousObject = [];
 				}
 				JSchema.extendAndUnset(previousObject, oldObject);
@@ -433,6 +436,23 @@
 				}
 			}
 
+			// unset array elements removed by a change
+			if (previousIsArray && previousObject.length > newObject.length) {
+				// pop off all the removed elements
+				oldObject = oldObject.slice(0, newObject.length);
+				// fire any callbacks needed
+				var i = newObject.length;
+				while (!suppressEvent && i < previousObject.length) {
+					suppressEvent = this._propertyChange(eventStr + '.' + i, previousObject[i], undefined, eventStr + '.' + i);
+					if (!suppressEvent) {
+						suppressEvent = this._propertyChange(eventStr + '.*', previousObject[i], undefined, eventStr + '.' + i);
+					}
+					++i;
+				}
+				childrenChanged = true;
+			}
+
+			// fire a change event for ourselves when bubbling back up
 			if (childrenChanged && !suppressEvent) {
 				suppressEvent = this._propertyChange(eventStr, previousObject, oldObject, eventStr);
 			}
