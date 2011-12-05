@@ -149,7 +149,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    })
 		outputLine('record constructed:', test.getAll());
 
-	    // ...and bind events to that specific instance.
+	    // ...and bind events to that specific instance. Not that you'd probably usually want to.
 		test.addEvent('change:object_test', propChange);	// do something when this subobject is modified
 		test.addEvent('change:object_test.key', propChange);	// do something when this property of a subobject is modified
 		test.addEvent('change:object_test.value', propChange);
@@ -219,8 +219,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		} else
 		if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log(e);
 	}
-	if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log('Final object is:');
-	if (typeof console != 'undefined' && typeof console.dir != 'undefined') console.dir(test.attributes);
+	outputHeader('Final object is:');
+	outputLine(test.attributes);
 });
 </script>
 <style type="text/css">
