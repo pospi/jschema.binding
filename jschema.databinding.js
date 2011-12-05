@@ -46,59 +46,6 @@
 		this.set(attrs, noEvents);
 	};
 
-	/**
-	 * Recursively extends an object's prototype with the object passed in.
-	 * This acts similarly to (and is heavily based upon) jQuery's extend(),
-	 * except that explicitly set 'undefined' values have the effect of
-	 * unsetting values in the original object.
-	 */
-	JSchema.extendAndUnset = function()
-	{
-		var options, name, src, copy, copyIsArray, clone,
-			target = arguments[0] || {},
-			i = 1,
-			length = arguments.length;
-
-		// Handle case when target is a string or something (possible in deep copy)
-		if ( typeof target !== "object" && !jQuery.isFunction(target) ) {	/* LIBCOMPAT */
-			target = {};
-		}
-
-		for ( ; i < length; i++ ) {
-			// Only deal with non-null/undefined values
-			if ( (options = arguments[ i ]) != null ) {
-				// Extend the base object
-				for ( name in options ) {
-					src = target[ name ];
-					copy = options[ name ];
-
-					// Prevent never-ending loop
-					if ( target === copy ) {
-						continue;
-					}
-
-					// Recurse if we're merging plain objects or arrays
-					if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
-						if ( copyIsArray ) {
-							copyIsArray = false;
-							clone = src && jQuery.isArray(src) ? src : [];	/* LIBCOMPAT */
-						} else {
-							clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
-						}
-
-						// Never move original objects, clone them
-						target[ name ] = JSchema.extendAndUnset( clone, copy );
-					} else {
-						target[ name ] = copy;
-					}
-				}
-			}
-		}
-
-		// Return the modified object
-		return target;
-	};
-
 	JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		attributes : {},			// our properties
@@ -126,10 +73,12 @@
 			return this.attributes[attr] != null;
 		},
 
-		// Get the value of an attribute
+		// Get the value of an attribute.
+		// Accepts dot notation for accessing subproperties.
+		// Returns undefined if the attribute is not found.
 		get : function(attr)
 		{
-			return this.attributes[attr];
+			return JSchema.dotSearchObject(this.attributes, attr);
 		},
 
 		// Return a copy of our attributes
