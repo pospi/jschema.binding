@@ -181,11 +181,6 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		outputHeader("Initialising object_test");
 		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
 
-		outputHeader("Getter tests");
-		outputLine('name =', test.get('name'));
-		outputLine('object_test =', test.get('object_test'));
-		outputLine('object_test.key =', test.get('object_test.key'));
-
 		outputHeader("Changing object_test.key");
 		test.set({ object_test : {key : 'zomg'} });
 
@@ -221,6 +216,22 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	outputHeader('Final object is:');
 	outputLine(test.attributes);
+
+	outputHeader('.....');
+	outputHeader('Further methods...');
+	var test3 = test.clone();
+	test3.set({ object_test: { value: 'oh noooooes'}});
+	outputLine('New object:', test3.attributes);
+
+	outputHeader("Getter tests");
+	outputLine('name =', test.get('name'));
+	outputLine('object_test =', test.get('object_test'));
+	outputLine('object_test.key =', test.get('object_test.key'));
+
+	outputHeader('Unsetting a property using a dot-notation index');
+	test3.unset('object_test.value');
+
+	outputHeader('Final object:', test3.attributes);
 });
 </script>
 <style type="text/css">
