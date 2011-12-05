@@ -113,6 +113,8 @@
 		 * the server.
 		 *
 		 * @param	object	now		if passed, only the attributes specified will be checked for changes
+		 *
+		 * :TODO: return only subproperties changed instead of only recursing top-level
 		 */
 		getChangedAttributes : function(now)
 		{
