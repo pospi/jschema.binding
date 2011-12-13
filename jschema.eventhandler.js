@@ -52,7 +52,7 @@ JSchema.EventHandler = {
 				if (!list) return this;
 				for (var i = 0, l = list.length; i < l; i++) {
 					if (list[i] && callback === list[i][0]) {
-						list[i] = null;
+						list.splice(i, 1);
 						break;
 					}
 				}
@@ -64,33 +64,74 @@ JSchema.EventHandler = {
 	/**
 	 * Trigger an event, firing all bound callbacks. Callbacks are passed all arguments
 	 * to this function following the eventname.
-	 * Callbacks bound to "all" are also passed the event name as the first argument.
 	 *
 	 * @return TRUE if some callbacks were executed or FALSE if nothing was listening to it
 	 */
 	fireEvent : function(eventName)
 	{
-		var list, calls, ev, callback, args, executions = false;
-		var both = 2;
+		var calls,			// array of all registered callbacks
+			list,			// current callback list for executing
+			callback,		// current callback in the list being executed
+			thisEvent,		// namespace components of current event being tested
+			thisNamespace,	// current namespace component for checking
+			matching,		// true if currently testing event should be fired
+			i, j, l,
+			args = Array.prototype.slice.call(arguments, 1),
+			executions = false;	// return flag to specify whether callbacks were fired
+
 		if (!(calls = this._callbacks)) return this;
 
 		this._lastEventCancelled = false;
 
-		while (both-- && !this._lastEventCancelled) {
-			ev = both ? eventName : 'all';
-			if (list = calls[ev]) {
-				for (var i = 0, l = list.length; i < l; i++) {
-					if (!(callback = list[i])) {
-						list.splice(i, 1); i--; l--;
-					} else {
-						args = both ? Array.prototype.slice.call(arguments, 1) : arguments;
-						executions = true;
-						var retval = callback[0].apply(callback[1] || this, args);
-						if (retval === false) {
-							this._lastEventCancelled = true;
-							break;
-						}
+		// construct a regex to determine which event callbacks should be fired (child and all parents)
+		eventName = eventName.split('.');
+
+		for (var boundEvt in calls) {
+			// if next deepest event namespace prevented bubbling, stop
+			if (this._lastEventCancelled) {
+				break;
+			}
+
+			// break the callback name registered here into namespaces
+			thisEvent = boundEvt.split('.');
+			matching = true;
+
+			// determine whether the fired event matches
+			for (j = 0, l = eventName.length; j < l && thisEvent.length; ++j) {
+				thisNamespace = thisEvent.shift();
+				if (thisNamespace == '?') {				// single level wildcard
+					continue;
+				} else if (thisNamespace == '*') {		// multilevel wildcard
+					thisNamespace = thisEvent.shift();
+					// ignore everything until we get a match for the next part
+					while (thisNamespace != eventName[j + 1] && j + 1 < l) {
+						j++;
 					}
+					if (j + 1 == l) {	// reached the end without matching
+						matching = false;
+						break;
+					}
+				} else if (thisNamespace != eventName[j]) {	// non-match
+					matching = false;
+					break;
+				}
+			}
+			if (!matching || thisEvent.length) {	// namespace mismatch or callback was bound to a more specific event
+				continue;		// :TODO: order them and make this break
+			}
+
+			// fire registered callbacks
+			list = calls[boundEvt];
+			for (i = 0, l = list.length; !this._lastEventCancelled && i < l; i++) {
+				callback = list[i];
+				executions = true;	// flag that callbacks were fired
+
+				var retval = callback[0].apply(callback[1] || this, args);
+
+				// check for a return value to prevent event bubbling
+				if (retval === false) {
+					this._lastEventCancelled = true;
+					break;
 				}
 			}
 		}
