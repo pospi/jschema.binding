@@ -30,7 +30,11 @@ JSchema.EventHandler = {
 	 */
 	addEvent : function(ev, callback, context)
 	{
-		var list  = this._callbacks[ev] || (this._callbacks[ev] = []);
+		if (typeof this._callbacks[ev] == 'undefined') {
+			this._callbacks[ev] = [];
+			this._resortCallbacks();
+		}
+		var list  = this._callbacks[ev];
 		list.push([callback, context]);
 		return this;
 	},
@@ -122,7 +126,7 @@ JSchema.EventHandler = {
 
 			// fire registered callbacks
 			list = calls[boundEvt];
-			for (i = 0, l = list.length; !this._lastEventCancelled && i < l; i++) {
+			for (i = 0, l = list.length; i < l; i++) {
 				callback = list[i];
 				executions = true;	// flag that callbacks were fired
 
@@ -136,5 +140,54 @@ JSchema.EventHandler = {
 			}
 		}
 		return executions;
+	},
+
+	/**
+	 * Reorders the callbacks array into the order they should be fired in (more
+	 * specific first). This allows us to break callback iteration when a callback
+	 * returns false and prevents bubbling.
+	 */
+	_resortCallbacks : function()
+	{
+		// grab all the callback names currently stored
+		var callbackNames = [],
+			orderedCallbacks = {},
+			cb, i, l;
+		for (cb in this._callbacks) {
+			callbackNames.push(cb);
+		}
+
+		// sort the array of callback names
+		callbackNames.sort(function(a, b) {
+			if (a == b) {
+				return 0;
+			}
+			var aa = a.split('.'),
+				ab = b.split('.'),
+				nextA, nextB;
+			// go through both namespace arrays until we don't match
+			while (aa.length && ab.length && nextA == nextB) {
+				nextA = aa.shift();
+				nextB = ab.shift();
+			}
+			if (nextA == nextB) {
+				return aa.length ? -1 : 1;	// put the longest one first if they still match when it's over
+			}
+			if (nextA == '*' || (nextA == '?' && nextB != '*')) {
+				return 1;		// a was a lower-priority wildcard, put b first
+			}
+			if (nextB == '*' || (nextB == '?' && nextA != '*')) {
+				return -1;		// b was a lower-priority wildcard, put a first
+			}
+			return nextA < nextB ? -1 : 1;
+		});
+
+		// loop back over in them in the new order and reassign
+		for (i = 0, l = callbackNames.length; i < l; ++i) {
+			orderedCallbacks[callbackNames[i]] = this._callbacks[callbackNames[i]];
+		}
+
+		// finally, assign them back
+		this._callbacks = orderedCallbacks;
 	}
 };
