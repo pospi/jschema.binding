@@ -92,6 +92,29 @@ JSchema.EventHandler = {
 	},
 
 	/**
+	 * Add a list of event callbacks
+	 * @param {object} events an object containing event names as keys, and callback
+	 *                        functions or arrays of functions & contexts as values
+	 */
+	addEvents : function(events)
+	{
+		// preconvert into arrays
+		var cb;
+		for (var e in events) {
+			if (typeof events[e] == 'function') {
+				events[e] = [[events[e], undefined]];
+			} else {	// assume an array with function context at element 1
+				events[e] = [events[e]];
+			}
+		}
+
+		JSchema.extendAndUnset(this._callbacks, events);
+		this._callbacks = this._resortCallbacks(this._callbacks);
+
+		return this;
+	},
+
+	/**
 	 * @param	string		ev			event name. If null, all callbacks are removed.
 	 * @param	function	callback	callback function to remove for this event type. If null, all callbacks for this event are released.
 	 */
