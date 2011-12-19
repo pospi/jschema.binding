@@ -4,15 +4,65 @@
  * A module that can be mixed in to *any object* in order to provide it with
  * custom events. addEvent() and removeEvent() are chainable.
  *
+ * The event model is based upon namespacing, which allow binding to events of any
+ * specifity along a period-separated chain - I believe this is similar to jQuery
+ * event namespaces, though i've no idea whether theirs allows further depth levels.
+ * In addition, namespaces can be substituted with the wildcards ? and * to match
+ * arbitrary namespaces at particular depths. The best way to illustrate a real use-case
+ * of this is by example:
+ *
+ * 		// Create an object, and initialise an event handler on it
+ *		// Using jQuery to illustrate 'extend'ing since this would be complex in pure js
+ *		var object = {
+ *			A : {
+ *				AA : 'foo'
+ *			}, B : {
+ *				AA : 'foo'
+ *			}
+ *		};
+ *		$.extend(object, JSchema.EventHandler);
+ *
+ *		// We can add a callback to do something when the object is modified...
+ *		object.addEvent('change', function(){ console.log('The object was modified'); });
+ *		// ..or when the object is modified as a result of being created...
+ *		object.addEvent('change.create', function(){ console.log('The object was created'); });
+ *		// ..or when being updated or deleted...
+ *		object.addEvent('change.update', function(){ console.log('The object was updated'); });
+ *		object.addEvent('change.delete', function(){ console.log('The object was deleted'); });
+ *		// ..or when a particular property is updated...
+ *		object.addEvent('change.update.A', function(){ console.log('A updated'); });
+ *		object.addEvent('change.update.B', function(){ console.log('B updated'); });
+ *		// ..or a property of a property...
+ *		object.addEvent('change.update.A.AA', function(){ console.log('A.AA updated'); });
+ *		object.addEvent('change.update.B.AA', function(){ console.log('B.AA updated'); });
+ *		// ..or when something is deleted.
+ *		object.addEvent('change.delete.A.AA', function(){ console.log('A.AA deleted'); });
+ *		// We can also bind to any modification (create, update or delete) of properties via:
+ *		object.addEvent('change.?.A', function(){ console.log('A modified'); });
+ *		object.addEvent('change.?.A.AA', function(){ console.log('A.AA modified'); });
+ *		// And finally, any modification to *any* subproperty AA could be expressed as:
+ *  	object.addEvent('change.*.AA', function(){ console.log('*.AA modified'); });
+ *
+ *  	// This would normally happen from your own code, but you would fire
+ *  	// events as follows...
+ *
+ *		// When we fire a change event, only the top-level callbacks will fire...
+ *		object.fireEvent('change');
+ *			>> The object was modified
+ *		// But we can also fire an event when a particular property is updated,
+ *		// for the following event chain to fire (as bound):
+ *		object.fireEvent('change.update.A.AA');
+ *			>> A.AA updated				<- specific update event for this property
+ *			>> A.AA modified			<- ? wildcard change event for this property
+ *			>> A updated				<- update event for parent property...
+ *			>> A modified
+ *			>> *.AA modified			<- * wildcard property update
+ *			>> The object was updated	<- nonspecific update event
+ *			>> The object was modified	<- top-level modification event
+ *
  * Event firing can be interrupted, like DOM events, by returning false from a
  * callback function. Subclasses can test whether the last event firing was
  * interrupted prematurely by checking the _lastEventCancelled property.
- *
- *		// using jQuery to illustrate 'extend'ing since this would be complex in pure js
- *		var object = {};
- *		$.extend(object, JSchema.EventHandler);
- *		object.addEvent('expand', function(){ alert('expanded'); });
- *		object.fireEvent('expand');
  *
  * @package	JSchema.Binding
  * @author	pospi	<pospi@spadgos.com>
@@ -22,6 +72,8 @@ JSchema.EventHandler = {
 
 	_callbacks : {},
 	_lastEventCancelled : false,
+	_marshalling : false,
+	_marshalledEvents : {},
 
 	/**
 	 * @param	string		ev			event name. Use "all" to bind to all events.
@@ -32,9 +84,9 @@ JSchema.EventHandler = {
 	{
 		if (typeof this._callbacks[ev] == 'undefined') {
 			this._callbacks[ev] = [];
-			this._resortCallbacks();
+			this._callbacks = this._resortCallbacks(this._callbacks);
 		}
-		var list  = this._callbacks[ev];
+		var list = this._callbacks[ev];
 		list.push([callback, context]);
 		return this;
 	},
@@ -73,17 +125,112 @@ JSchema.EventHandler = {
 	 */
 	fireEvent : function(eventName)
 	{
-		var calls,			// array of all registered callbacks
-			list,			// current callback list for executing
+		var args = Array.prototype.slice.call(arguments, 1);
+
+		if (this._marshalling) {
+			if (typeof this._marshalledEvents[eventName] == 'undefined') {
+				this._marshalledEvents[eventName] = [];
+			}
+			this._marshalledEvents[eventName].push([args, undefined]);
+			return true;	// :TODO: yeah, we *kinda* fired it...
+		}
+
+		if (!(this._callbacks)) return false;
+
+		return this._processEventCallbacks(eventName, args, this._getEventCallbacks());
+	},
+
+	/**
+	 * Event marshalling - begin collecting fired events in order to fire
+	 * them simultaneously sometime later without re-firing callbacks
+	 * from overlapping namespaces.
+	 */
+	holdEvents : function()
+	{
+		this._marshalling = true;
+	},
+
+	/**
+	 * Fire all events deferred as a result of marshalling. Return TRUE/FALSE
+	 * depending on whether callbacks were run as with fireEvent().
+	 */
+	fireHeldEvents : function()
+	{
+		this._marshalling = false;
+
+		if (!(this._callbacks)) return false;
+
+		var calls = this._getEventCallbacks(),
+			fired = false,
+			list,
+			currEvent;
+
+		// first, order the marshalled events by specifity to order bubbling correctly
+		this._marshalledEvents = this._resortCallbacks(this._marshalledEvents);
+
+		this._lastEventCancelled = false;
+
+		// fire all in sequence unless propagation was cancelled
+		for (currEvent in this._marshalledEvents) {
+			if (this._lastEventCancelled) {
+				break;
+			}
+			list = this._marshalledEvents[currEvent];
+			for (i = 0, l = list.length; i < l; ++i) {
+				if ( this._processEventCallbacks(currEvent, list[i][0], calls) ) {
+					fired = true;
+				}
+			}
+		}
+
+		this._marshalledEvents = {};
+		return fired;
+	},
+
+	/**
+	 * Trash events accumulated while marshalling
+	 */
+	abortHeldEvents : function()
+	{
+		this._marshalledEvents = {};
+		this._marshalling = false;
+	},
+
+	/**
+	 * Returns a shallow copy of our own callback register for processing
+	 * @return {object}
+	 */
+	_getEventCallbacks : function()
+	{
+		var calls = {},
+			cb,
+			callback;
+		for (cb in this._callbacks) {
+			calls[cb] = this._callbacks[cb];
+		}
+		return calls;
+	},
+
+	/**
+	 * Process an event name and arguments against an associative array of callbacks.
+	 * Callback references are removed after running so that no two of the same event
+	 * will fire during one event pass - you can use this property with a steadily declining
+	 * array of callbacks to fire multiple events as part of the one logical 'change'.
+	 * @param  {string} eventName event to fire
+	 * @param  {array}  args      arguments to the event's callbacks
+	 * @param  {object} calls     object mapping callback functions to event names. Events
+	 *                            fired will be removed from this object after processing.
+	 * @return {boolean}  a flag indicating whether callbacks were fired
+	 */
+	_processEventCallbacks : function(eventName, args, calls)
+	{
+		var list,			// current callback list for executing
 			callback,		// current callback in the list being executed
 			thisEvent,		// namespace components of current event being tested
 			thisNamespace,	// current namespace component for checking
 			matching,		// true if currently testing event should be fired
 			i, j, l,
-			args = Array.prototype.slice.call(arguments, 1),
 			executions = false;	// return flag to specify whether callbacks were fired
-
-		if (!(calls = this._callbacks)) return this;
 
 		this._lastEventCancelled = false;
 
@@ -94,6 +241,11 @@ JSchema.EventHandler = {
 			// if next deepest event namespace prevented bubbling, stop
 			if (this._lastEventCancelled) {
 				break;
+			}
+
+			// bail early if the callback has already been fired
+			if (!(list = calls[boundEvt])) {
+				continue;
 			}
 
 			// break the callback name registered here into namespaces
@@ -125,19 +277,24 @@ JSchema.EventHandler = {
 			}
 
 			// fire registered callbacks
-			list = calls[boundEvt];
 			for (i = 0, l = list.length; i < l; i++) {
-				callback = list[i];
+				if (!(callback = list[i])) {
+					// this can happen when running marshalled callbacks
+					continue;
+				}
 				executions = true;	// flag that callbacks were fired
 
 				var retval = callback[0].apply(callback[1] || this, args);
 
-				// check for a return value to prevent event bubbling
+				// check for a return value to prevent event bubbling up to the
+				// next callback
 				if (retval === false) {
 					this._lastEventCancelled = true;
-					break;
 				}
 			}
+
+			// remove the callbacks now that we've fired them
+			calls[boundEvt] = null;
 		}
 		return executions;
 	},
@@ -147,31 +304,33 @@ JSchema.EventHandler = {
 	 * specific first). This allows us to break callback iteration when a callback
 	 * returns false and prevents bubbling.
 	 */
-	_resortCallbacks : function()
+	_resortCallbacks : function(callbacks)
 	{
 		// grab all the callback names currently stored
 		var callbackNames = [],
 			orderedCallbacks = {},
 			cb, i, l;
-		for (cb in this._callbacks) {
+
+		for (cb in callbacks) {
 			callbackNames.push(cb);
 		}
 
 		// sort the array of callback names
 		callbackNames.sort(function(a, b) {
-			if (a == b) {
+			if (a == b) {	// exactly equal if keys are a string match
 				return 0;
 			}
+
 			var aa = a.split('.'),
 				ab = b.split('.'),
 				nextA, nextB;
-			// go through both namespace arrays until we don't match
+			if (aa.length != ab.length) {
+				return aa.length > ab.length ? -1 : 1;	// put longest one first if length mismatch
+			}
+			// otherwise go through both namespace arrays until we don't match or reach the end
 			while (aa.length && ab.length && nextA == nextB) {
 				nextA = aa.shift();
 				nextB = ab.shift();
-			}
-			if (nextA == nextB) {
-				return aa.length ? -1 : 1;	// put the longest one first if they still match when it's over
 			}
 			if (nextA == '*' || (nextA == '?' && nextB != '*')) {
 				return 1;		// a was a lower-priority wildcard, put b first
@@ -184,10 +343,9 @@ JSchema.EventHandler = {
 
 		// loop back over in them in the new order and reassign
 		for (i = 0, l = callbackNames.length; i < l; ++i) {
-			orderedCallbacks[callbackNames[i]] = this._callbacks[callbackNames[i]];
+			orderedCallbacks[callbackNames[i]] = callbacks[callbackNames[i]];
 		}
 
-		// finally, assign them back
-		this._callbacks = orderedCallbacks;
+		return orderedCallbacks;
 	}
 };
