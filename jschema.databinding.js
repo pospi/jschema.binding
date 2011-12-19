@@ -51,7 +51,6 @@
 		attributes : {},			// our properties
 		_previousAttributes : null,	// A snapshot of the model's previous attributes, taken immediately after the last "change" event was fired.
 		_dirty : false,				// true if object is dirty (needs to be pushed to server)
-		_changing : false,			// true when changing (prevents callbacks being recursively fired)
 
 		//=============================================================================================
 		//	Accessors
@@ -89,14 +88,25 @@
 
 		//======= Saved / previous state ========
 
-		// Determine if the model has changed since the last "change" event.
-		// If an attribute name is passed, determine if that attribute has changed.
+		/**
+		 * Determine if the model has changed since the last "change" event.
+		 * If an attribute name is passed, determine if that attribute has changed.
+		 */
 		hasChanged : function(attr)
 		{
 			if (attr) {
 				return JSchema.dotSearchObject(this._previousAttributes, attr) != JSchema.dotSearchObject(this.attributes, attr);
 			}
 			return this._dirty;
+		},
+
+		/**
+		 * Flag the record as non-dirty again after some changes. You would usually
+		 * do this in response to a successful AJAX storing of the data within it.
+		 */
+		changesPropagated : function()
+		{
+			this._dirty = false;
 		},
 
 		// Get the previous value of an attribute, recorded at the time of the last data change
@@ -156,11 +166,9 @@
 				return false;
 			}
 
-			// Flag that change events are being fired
-			var alreadyChanging = this._changing;
-			this._changing = true;
-
 			this._previousAttributes = this.getAttributes();
+
+			this.holdEvents();
 
 			// Update attributes
 			for (var attr in attrs) {
@@ -177,17 +185,19 @@
 					now[attr] = val;
 					this._dirty = true;
 					if (!suppressEvent) {
-						suppressEvent = this._propertyChange(attr, oldVal, val, attr);
+						this._propertyChange(attr, (val === undefined ? 'delete' : 'update'), oldVal, val, attr);
 					}
 				}
 			}
 
-			// Fire the "change" event if the model has been changed
-			if (!alreadyChanging && !suppressEvent && this._dirty) {
+			if (!suppressEvent) {
+				// Fire the "change" event if the model has been changed
 				this.change();
+				this.fireHeldEvents();
+			} else {
+				this.abortHeldEvents();
 			}
 
-			this._changing = false;
 			return this;
 		},
 
@@ -212,22 +222,15 @@
 				return this;
 			}
 
-			// Flag that change events are being fired
-			var alreadyChanging = this._changing;
-			this._changing = true;
-
 			// copy over our current attributes to the previous
 			this._previousAttributes = this.getAttributes();
 			this.attributes = tempAttrs;
 
 			// Fire "change" events if desired
-			if (!alreadyChanging && !suppressEvent) {
-				suppressEvent = this._propertyChange(path, value, undefined, path);	// fire a change event for the attribute removed
-				// :TODO: bubble events up
-				this.change();
+			if (!suppressEvent) {
+				this._propertyChange(path, 'delete', value, undefined, path);	// fire a change event for the attribute removed
 			}
 
-			this._changing = false;
 			return this;
 		},
 
@@ -246,22 +249,21 @@
 				return false;
 			}
 
-			// Flag that change events are being fired
-			var alreadyChanging = this._changing;
-			this._changing = true;
-
 			this._previousAttributes = this.getAttributes();
 			this.attributes = {};
 			this._dirty = true;
 
-			if (!alreadyChanging && !suppressEvent) {
+			if (!suppressEvent) {
+				this.holdEvents();
+
 				for (attr in old) {
-					suppressEvent = this._propertyChange(attr, old[attr], undefined, attr);	// fire change events for all removed attributes
+					this._propertyChange(attr, 'delete', old[attr], undefined, attr);	// fire change events for all removed attributes
 				}
 				this.change();
+
+				this.fireHeldEvents();
 			}
 
-			this._changing = false;
 			return this;
 		},
 
@@ -275,13 +277,10 @@
 		},
 
 		// Call this method to manually fire a 'change' event
-		// Calling this will cause all callbacks listening to the data to run
+		// Calling this will cause all callbacks listening to the record to run
 		change : function(options)
 		{
-			if (!this._lastEventCancelled) {
-				this.fireEvent('change', this);
-			}
-			this._dirty = false;
+			this.fireEvent('change', this);
 		},
 
 		//=============================================================================================
@@ -290,15 +289,15 @@
 		/**
 		 * Fire a change event for one of the record's properties changing
 		 * @param  {string} propertyString name of the property changed (dot notation)
+		 * @param  {string} changeAction	subevent of the change event (create, update or delete)
 		 * @param  {mixed} oldValue		value of the attribute before the change
 		 * @param  {mixed} newValue		new value of the attribute currently in the object
 		 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
-		 * @return {bool} whether the event was cancelled prematurely
 		 */
-		_propertyChange : function(propertyString, oldValue, newValue, attrIndex)
+		_propertyChange : function(propertyString, changeAction, oldValue, newValue, attrIndex)
 		{
-			this.fireEvent('change:' + propertyString, this, oldValue, newValue, attrIndex, propertyString);
-			return this._lastEventCancelled;
+			var eventName = 'change.' + changeAction + '.' + propertyString;
+			this.fireEvent(eventName, this, oldValue, newValue, attrIndex, eventName);
 		},
 
 		/**
@@ -368,15 +367,14 @@
 						clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 					}
 
-					var results = JSchema._handleObjectChange(newEventStr, clone, copy);
+					var results = JSchema._handleObjectChange(newEventStr, clone, copy, suppressEvent);
 
 					oldObject[ name ] = results[0];
-					suppressEvent = results[2];		// cancel the events if a child callback prevented bubbling
 					childrenChanged = true;			// tell our parent to fire modified, too
 
 					// if children were modified, fire a change event for us too!
 					if (results[1] && !suppressEvent) {
-						suppressEvent = this._propertyChange(newEventStr, src, oldObject[name], newEventStr);
+						this._propertyChange(newEventStr, 'update', src, oldObject[name], newEventStr);
 					}
 				} else if (src != copy) {
 					oldObject[ name ] = copy;
@@ -384,11 +382,7 @@
 
 					// fire a change event for the modified property
 					if (!suppressEvent) {
-						suppressEvent = this._propertyChange(newEventStr, src, copy, newEventStr);
-						// fire a wildcard change event too if one is registered
-						if (!suppressEvent && (jQuery.isPlainObject(oldObject) || jQuery.isArray(oldObject))) {
-							suppressEvent = this._propertyChange(eventStr + '.*', src, copy, newEventStr);
-						}
+						this._propertyChange(newEventStr, (copy === undefined ? 'delete' : 'update'), src, copy, newEventStr);
 					}
 				}
 			}
@@ -399,22 +393,21 @@
 				oldObject = oldObject.slice(0, newObject.length);
 				// fire any callbacks needed
 				var i = newObject.length;
-				while (!suppressEvent && i < previousObject.length) {
-					suppressEvent = this._propertyChange(eventStr + '.' + i, previousObject[i], undefined, eventStr + '.' + i);
-					if (!suppressEvent) {
-						suppressEvent = this._propertyChange(eventStr + '.*', previousObject[i], undefined, eventStr + '.' + i);
+				if (!suppressEvent) {
+					while (i < previousObject.length) {
+						this._propertyChange(eventStr + '.' + i, 'delete', previousObject[i], undefined, eventStr + '.' + i);
+						++i;
 					}
-					++i;
 				}
 				childrenChanged = true;
 			}
 
 			// fire a change event for ourselves when bubbling back up
 			if (childrenChanged && !suppressEvent) {
-				suppressEvent = this._propertyChange(eventStr, previousObject, oldObject, eventStr);
+				this._propertyChange(eventStr, 'update', previousObject, oldObject, eventStr);
 			}
 
-			return [oldObject, childrenChanged, suppressEvent];
+			return [oldObject, childrenChanged];
 		},
 
 		// mostly taken from Underscore.js isEqual()
