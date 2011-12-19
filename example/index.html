@@ -33,12 +33,18 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			console.log.apply(console.log, arguments);
 		}
 		var args = Array.prototype.slice.call(arguments, 0, arguments.length);
-		var string = '';
+		var string = '', a;
 		while (args.length) {
 			if (typeof args[0] == 'string' || typeof args[0] == 'number') {
 				string += ' ' + args.shift();
 			} else {
-				string += ' <pre>' + JSON.stringify(args.shift(), undefined, '  ') + '</pre>';
+				a = args.shift();
+				try {
+					string += ' <pre>' + JSON.stringify(a, undefined, '  ') + '</pre>';
+				} catch (e) {
+					console.log('OH NOES SOMETHING BROKE', a);
+					throw e;
+				}
 			}
 		}
 		logEl.append(jQuery('<div class="clearfix">' 			/* LIBCOMPAT */
@@ -93,7 +99,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 					"key":{"type":"string"},
 					"value":{"type":"string"},
 					"anotherValue":{"type":"number"},
-					"noBubble":{"type":"number"}
+					"noBubble":{"type":"number"},
+					"price":{"type":"number"}
 				}
 			}
 		},
@@ -116,20 +123,15 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	    // object is modified
 	    function change(record) {
-		    outputLine('changed');
+		    outputLine('( change )');
 		}
 		// object modification was rejected as it did not pass validation
 	    function errored(record, errs) {
-		    outputLine('error', errs);
+		    outputLine('( error )', errs);
 		}
 		// a particular property of the object changes
-	    function propChange(record, oldval, newval, attr, eventName) {
-		    outputLine('change(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
-		}
-		// this callback will prevent parent property change events from executing as well
-	    function propChangeNoBubble(record, oldval, newval, attr, eventName) {
-		    outputLine('change(', eventName, '): ', attr, ' changed:', oldval, '->', newval);
-		    return false;
+	    function propChange(boundTo, record, oldval, newval, attr, eventName) {
+		    outputLine('( ', eventName, ' >> ', boundTo, ' ): ', attr, ' changed:', oldval, '->', newval);
 		}
 	    //-------------------------------------------------------------
 
@@ -138,7 +140,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    // We can bind events to every instance of a model...
 	    // (note that this must be done prior to creating records for them to inherit these base events)
 	    TestModel.prototype.addEvent('change', change);				// do something when any record changes
-		TestModel.prototype.addEvent('change:name', propChange);	// do something when the 'name' property of any record changes
+		TestModel.prototype.addEvent('change.update.name', function (record, oldval, newval, attr, eventName) {
+			propChange("change.update.name", record, oldval, newval, attr, eventName);	// do something when the 'name' property of any record changes
+		});
 
 	    // ...or we can create a new data record...
 	    outputHeader('New data object');
@@ -150,16 +154,40 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		outputLine('record constructed:', test.getAll());
 
 	    // ...and bind events to that specific instance. Not that you'd probably usually want to.
-		test.addEvent('change:object_test', propChange);	// do something when this subobject is modified
-		test.addEvent('change:object_test.key', propChange);	// do something when this property of a subobject is modified
-		test.addEvent('change:object_test.value', propChange);
-		test.addEvent('change:object_test.anotherValue', propChange);
-		test.addEvent('change:object_test.noBubble', propChangeNoBubble);	// this callback prevents parent events from firing when this property changes
-		test.addEvent('change:tags', propChange);			// do something when this array changes
-		test.addEvent('change:tags.1', propChange);			// do something when this particular element of an array changes
-		test.addEvent('change:categories', propChange);
-		test.addEvent('change:categories.*', propChange);	// do something when any element in the array changes
-		test.addEvent('error', errored);				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
+		test.addEvents({
+			"change.?.object_test" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test", record, oldval, newval, attr, eventName);
+			},	// do something when this subobject is modified
+			"change.?.object_test.key" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.key", record, oldval, newval, attr, eventName);
+			},	// do something when this property of a subobject is modified
+			"change.?.object_test.value" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.value", record, oldval, newval, attr, eventName);
+			},
+			"change.?.object_test.anotherValue" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.anotherValue", record, oldval, newval, attr, eventName);
+			},
+			"change.?.object_test.noBubble" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.noBubble", record, oldval, newval, attr, eventName);
+				return false;
+			},	// this callback prevents parent events from firing when this property changes
+			"change.update.tags" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.update.tags", record, oldval, newval, attr, eventName);
+			},			// do something when this array changes
+			"change.update.tags.1" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.update.tags.1", record, oldval, newval, attr, eventName);
+			},			// do something when this particular element of an array changes
+			"change.?.categories" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.categories", record, oldval, newval, attr, eventName);
+			},
+			"change.update.categories.?" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.update.categories.?", record, oldval, newval, attr, eventName);
+			},	// do something when any element in the array changes
+			"change.*.price" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.*.price", record, oldval, newval, attr, eventName);
+			},				// do something when any "price" value in any object changes
+			"error" : errored				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
+		});
 
 		outputHeader("Setting name");
 		test.set({ name : 'feeeeeeeeeeeed' });
@@ -173,7 +201,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			price : 12
 		})
 		outputLine('record constructed:', test2.getAll());
-		test2.addEvent('change:name', propChange);				// do something in addition to the model's change event when this record changes
+		test2.addEvent('change.update.name', function(record, oldval, newval, attr, eventName) {
+			propChange("change.update.name", record, oldval, newval, attr, eventName);
+		});				// do something in addition to the model's change event when this record changes
 
 		outputHeader("Setting name on the second record");
 		test2.set({ name : 'feeeeeeeeeeeed' });
@@ -207,6 +237,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 		outputHeader("Subtracting from categories array");
 		test.set({ categories : [10, 9] });
+
+		outputHeader("Setting price");
+		test.set({ price : 100 });
+
+		outputHeader("Setting price on obj_test");
+		test.set({ object_test : {price : 10} });
 	} catch (e) {
 		if (e.schemaErrors) {
 			outputHeader("uncaught exception", e);
@@ -232,6 +268,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	test3.unset('object_test.value');
 
 	outputHeader('Final object:', test3.attributes);
+	outputLine('And value of object_test beforehand:', test3.getPrevious('object_test'));
+	outputLine('Changed attributes were:', test3.getChangedAttributes());
+
+	/*outputHeader('Clearing...');
+	test3.clear();
+	outputLine(test3);*/
 });
 </script>
 <style type="text/css">
