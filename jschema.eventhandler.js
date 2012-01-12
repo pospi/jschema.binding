@@ -73,7 +73,9 @@ JSchema.EventHandler = {
 	_callbacks : {},
 	_lastEventCancelled : false,
 	_marshalling : false,
+	_inMarshalling : false,
 	_marshalledEvents : {},
+	_marshallEventStack : {},
 
 	/**
 	 * @param	string		ev			event name. Use "all" to bind to all events.
@@ -180,6 +182,7 @@ JSchema.EventHandler = {
 	fireHeldEvents : function()
 	{
 		this._marshalling = false;
+		this._inMarshalling = true;
 
 		if (!(this._callbacks)) return false;
 
@@ -190,23 +193,39 @@ JSchema.EventHandler = {
 
 		// first, order the marshalled events by specifity to order bubbling correctly
 		this._marshalledEvents = this._resortCallbacks(this._marshalledEvents);
+		this._marshallEventStack = {};
 
 		this._lastEventCancelled = false;
 
-		// fire all in sequence unless propagation was cancelled
+		// accumulate all fired callbacks in sequence. Higher-order callbacks
+		// will naturally override low-ordered ones.
 		for (currEvent in this._marshalledEvents) {
 			if (this._lastEventCancelled) {
 				break;
 			}
+
 			list = this._marshalledEvents[currEvent];
 			for (i = 0, l = list.length; i < l; ++i) {
 				if ( this._processEventCallbacks(currEvent, list[i][0], calls) ) {
 					fired = true;
 				}
 			}
+			this._marshalledEvents[currEvent] = null;	// flag as fired
+		}
+
+		// fire the final, most appropriate, set of callbacks
+		this._marshallEventStack = this._resortCallbacks(this._marshallEventStack);
+		for (var cb in this._marshallEventStack) {
+			if (this._lastEventCancelled) {
+				break;
+			}
+			if (this._fireCallbacks(this._marshallEventStack[cb][0], this._marshallEventStack[cb][1])) {
+				fired = true;
+			}
 		}
 
 		this._marshalledEvents = {};
+		this._inMarshalling = false;
 		return fired;
 	},
 
@@ -247,18 +266,13 @@ JSchema.EventHandler = {
 	 */
 	_processEventCallbacks : function(eventName, args, calls)
 	{
-		var list,			// current callback list for executing
-			callback,		// current callback in the list being executed
-			thisEvent,		// namespace components of current event being tested
-			thisNamespace,	// current namespace component for checking
-			matching,		// true if currently testing event should be fired
-			i, j, l,
+		var list,				// current callback list for executing
 			executions = false;	// return flag to specify whether callbacks were fired
 
 		this._lastEventCancelled = false;
 
 		// construct a regex to determine which event callbacks should be fired (child and all parents)
-		eventName = eventName.split('.');
+		var firedEvent = eventName.split('.');
 
 		for (var boundEvt in calls) {
 			// if next deepest event namespace prevented bubbling, stop
@@ -271,55 +285,85 @@ JSchema.EventHandler = {
 				continue;
 			}
 
-			// break the callback name registered here into namespaces
-			thisEvent = boundEvt.split('.');
-			matching = true;
-
-			// determine whether the fired event matches
-			for (j = 0, l = eventName.length; j < l && thisEvent.length; ++j) {
-				thisNamespace = thisEvent.shift();
-				if (thisNamespace == '?') {				// single level wildcard
-					continue;
-				} else if (thisNamespace == '*') {		// multilevel wildcard
-					thisNamespace = thisEvent.shift();
-					// ignore everything until we get a match for the next part
-					while (thisNamespace != eventName[j + 1] && j + 1 < l) {
-						j++;
-					}
-					if (j + 1 == l) {	// reached the end without matching
-						matching = false;
-						break;
-					}
-				} else if (thisNamespace != eventName[j]) {	// non-match
-					matching = false;
-					break;
-				}
-			}
-			if (!matching || thisEvent.length) {	// namespace mismatch or callback was bound to a more specific event
+			// determine whether the fired event matches us
+			if (!this._eventMatches(firedEvent, boundEvt.split('.'))) {
 				continue;		// :TODO: order them and make this break
 			}
 
-			// fire registered callbacks
-			for (i = 0, l = list.length; i < l; i++) {
-				if (!(callback = list[i])) {
-					// this can happen when running marshalled callbacks
-					continue;
-				}
-				executions = true;	// flag that callbacks were fired
-
-				var retval = callback[0].apply(callback[1] || this, args);
-
-				// check for a return value to prevent event bubbling up to the
-				// next callback
-				if (retval === false) {
-					this._lastEventCancelled = true;
-				}
+			// if we are marshalling, store the callback list for firing later.
+			// this allows higher-order callbacks bound to the same event to
+			// override (:TODO: should they append?) their more specific parameters
+			if (this._inMarshalling) {
+				this._marshallEventStack[boundEvt] = [list, args];
+				continue;
 			}
 
-			// remove the callbacks now that we've fired them
-			calls[boundEvt] = null;
+			// otherwise, fire the registered callbacks
+			if (this._fireCallbacks(list, args)) {
+				executions = true;
+			}
 		}
 		return executions;
+	},
+
+	/**
+	 * Execute all callbacks in an array and return true if any were fired
+	 */
+	_fireCallbacks : function(list, args)
+	{
+		var callback,
+			executions = false;
+
+		for (var i = 0, l = list.length; i < l; i++) {
+			if (!(callback = list[i])) {
+				// this can happen when running marshalled callbacks
+				continue;
+			}
+			executions = true;	// flag that callbacks were fired
+
+			var retval = callback[0].apply(callback[1] || this, args);
+
+			// check for a return value to prevent event bubbling up to the
+			// next callback
+			if (retval === false) {
+				this._lastEventCancelled = true;
+			}
+		}
+
+		return executions;
+	},
+
+	/**
+	 * Test whether an ordered array of event namespaces should cause
+	 * another array of event namespaces to run their callbacks
+	 * @param  {array} firedEvent array of event namespaces being fired
+	 * @param  {array} cbEvent    array of event namespaces being tested / bound callback namespaces
+	 * @return {bool}
+	 */
+	_eventMatches : function(firedEvent, cbEvent)
+	{
+		var thisNamespace,
+			j, l;
+
+		for (j = 0, l = firedEvent.length; j < l && cbEvent.length; ++j) {
+			thisNamespace = cbEvent.shift();
+			if (thisNamespace == '?') {				// single level wildcard
+				continue;
+			} else if (thisNamespace == '*') {		// multilevel wildcard
+				thisNamespace = cbEvent.shift();
+				// ignore everything until we get a match for the next part
+				while (thisNamespace != firedEvent[j + 1] && j + 1 < l) {
+					j++;
+				}
+				if (j + 1 == l) {	// reached the end without matching
+					return false;
+				}
+			} else if (thisNamespace != firedEvent[j]) {	// non-match
+				return false;
+			}
+		}
+		// any remaining namespaces in the callback means callback was bound to a more specific event
+		return cbEvent.length == 0;
 	},
 
 	/**
