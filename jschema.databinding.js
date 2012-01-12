@@ -291,6 +291,59 @@
 			return this;
 		},
 
+		/**
+		 * Array helper for appending elements to an array property
+		 *
+		 * @throws	an error if target variable is not an array
+		 */
+		push : function(attr, val, suppressEvent)
+		{
+			// Create an object with the previous attribute set to modify and validate with
+			var tempAttrs = this.getAttributes();
+
+			// Search temporary object for the property to remove
+			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+			if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
+
+			var parent = searchResult[0],
+				value = parent[searchResult[1]],
+				path = searchResult[2],
+				tempPath;
+
+			// append to the target array, assuming it is one. If not, an error will be thrown.
+			value.push(val);
+			if (!this.validate(tempAttrs)) {
+				// if the new attributes don't pass validation, abort. No need to return
+				// a failure case since an error callback is mandatory.
+				return this;
+			}
+
+			// copy over our current attributes to the previous
+			this._previousAttributes = this.getAttributes();
+			this.attributes = tempAttrs;
+
+			// fire events for all changes
+			if (!suppressEvent) {
+				this.holdEvents();
+
+				// fire creation for the actual array index affected
+				tempPath = path + '.' + (value.length - 1);
+				this._propertyChange(tempPath, 'create', undefined, val, tempPath);
+
+				// fire updates for all parent properties
+				path = path.split('.');
+				while (path.length) {
+					tempPath = path.join('.');
+					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					path.pop();
+				}
+
+				this.fireHeldEvents();
+			}
+
+			return this;
+		},
+
 		//=============================================================================================
 		//	Misc
 
