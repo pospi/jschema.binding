@@ -6,7 +6,9 @@
  * - 'change'
  *		Fired once when updated
  *		Recieves the Binding instance as a parameter
- * - 'change:<PROPERTYNAME>'
+ * - 'change.update.<PROPERTYNAME>',
+ *   'change.create.<PROPERTYNAME>' and
+ *   'change.delete.<PROPERTYNAME>'
  *		Fired due to changes of particular attributes
  *		Recieves the instance, attribute value and attribute name as parameters
  * - 'error'
@@ -17,7 +19,7 @@
  *
  * @package		JSchema.Binding
  * @depends		JSchema.EventHandler
- * @depends		jQuery 1.7.1	http://jquery.com
+ * @depends		jQuery 1.7.1	http://jquery.com					// LIBCOMPAT
  * @depends		JSV				https://github.com/garycourt/JSV
  * @depends		json2.js		https://github.com/douglascrockford/JSON-js, required for older browsers only
  * @author		pospi	<pospi@spadgos.com>
@@ -31,7 +33,7 @@
  	 * @param object options options for this validator:
 	 *                     - idField: 			key name of the object's attributes to use to
 	 *                     						determine record uniqueness. Defaults to 'id'.
-	 *                     - skipCreateEvents:	if true, don't fire any events while constructing this
+	 *                     - doCreateEvents:	if false, don't fire any events while constructing this
 	 *                     						object. Defaults to false.
  	 */
 	JSchema.Binding = function(attrs, schema, options)
