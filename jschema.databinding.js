@@ -128,19 +128,28 @@
 		 * view need to be updated and/or what attributes need to be persisted to
 		 * the server.
 		 *
-		 * @param	object	now		if passed, only the attributes specified will be checked for changes
-		 *
-		 * :TODO: return only subproperties changed instead of only recursing top-level
+		 * @param	bool	includePrevValue	if true, each element will be returned as an array of [oldValue, newValue]
+		 * @param	object/array	now			if passed, only the attributes specified will be checked for changes
+		 * @param	object/array	old			internal use. old attribute set to check 'now' against.
+		 * @return recursive object of changes if changes have been made, false otherwise
 		 */
-		getChangedAttributes : function(now)
+		getChangedAttributes : function(includePrevValue, now, old)
 		{
 			now || (now = this.attributes);
-			var old = this._previousAttributes;
-			var changed = false;
+			old || (old = this._previousAttributes);
+			var changes,
+				changed = false;
 			for (var attr in now) {
-				if (!this._isEqual(old[attr], now[attr])) {
-					changed = changed || {};
-					changed[attr] = now[attr];
+				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(old[attr]))	/* LIBCOMPAT */
+				  || (jQuery.isArray(now[attr]) && jQuery.isArray(old[attr])) ) {			/* LIBCOMPAT */
+				  	changes = this.getChangedAttributes(includePrevValue, now[attr], old[attr]);
+				  	if (changes) {
+				  		changed || (changed = {});
+				  		changed[attr] = changes;
+				  	}
+				} else if (!this._isEqual(old[attr], now[attr])) {
+					changed || (changed = {});
+					changed[attr] = includePrevValue ? [old[attr], now[attr]] : now[attr];
 				}
 			}
 			return changed;
@@ -191,8 +200,8 @@
 			// Update attributes
 			for (var attr in attrs) {
 				var val = attrs[attr];
-				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val))
-				  || (jQuery.isArray(now[attr]) && jQuery.isArray(val)) ) {			// object merging & array modification
+				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val))	/* LIBCOMPAT */
+				  || (jQuery.isArray(now[attr]) && jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
 					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
 					now[attr] = result[0];
 					if (result[1]) {
@@ -641,4 +650,4 @@
 		return ctor;
 	};
 
-}).call(this, jQuery);
+}).call(this, jQuery);	/* LIBCOMPAT */
