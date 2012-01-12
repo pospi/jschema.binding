@@ -59,21 +59,18 @@ The APIs, Let Me Show You Them
 >
 > <code>
 >    var person = JSchema.Binding.Create({ ... });
->
->    person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
->
->    var Jimmy = new person({ ... });
->
->    Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
+>	 person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
+>	 var Jimmy = new person({ ... });
+>	 Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
 > </code>
 
 > You can add events to particular instances too, if you wish:
 >
 > <code>
 >    Jimmy.addEvent('change.update.name', function() { alert('Thank god! Jimmy changed his name back.'); });
->
->    Jimy.set({name : 'Jimmy'});		// "Thank god! Jimmy changed his name back."
->     									// "My name is now Jimmy"
+>	 Jimy.set({name : 'Jimmy'});		
+>	 // "Thank god! Jimmy changed his name back."
+>    // "My name is now Jimmy"
 > </code>
 >
 > Events
