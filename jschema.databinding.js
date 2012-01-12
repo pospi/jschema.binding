@@ -39,6 +39,7 @@
 		this.schema = schema;
 
 		// read options
+		this.options = options;
 		this.idField = options.idField || 'id';
 
 		// set initial attributes
@@ -292,9 +293,15 @@
 		//	Misc
 
 		// Create a new model with identical attributes and validation to this one
-		clone : function()
+		clone : function(cloneEvents)
 		{
-			return new this.constructor(this.attributes, this.schema);
+			var obj = new this.constructor(this.attributes, this.schema, this.options);
+
+			if (cloneEvents) {
+				obj._callbacks = this._callbacks.splice(0);
+			}
+
+			return obj;
 		},
 
 		// Call this method to manually fire a 'change' event
