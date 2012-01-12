@@ -114,7 +114,11 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 				"href":"comments/?id={record_id}"
 			}
 		]
-    }, {idField : 'record_id'});
+    }, {
+    	// Record class options (all optional)
+	    idField : 'record_id',
+	    doCreateEvents : false,
+	});
 
     // create a record
 	try {
@@ -192,6 +196,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		outputHeader("Setting name");
 		test.set({ name : 'feeeeeeeeeeeed' });
 
+
 		// See here how the same setter fires less events for this object since it
 		// doesn't have an extra change event bound to it
 		outputHeader("Second data record with an instance change event bound in addition to the model's event");
@@ -207,6 +212,16 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 		outputHeader("Setting name on the second record");
 		test2.set({ name : 'feeeeeeeeeeeed' });
+
+
+		outputHeader("Events are ignored when cloning...");
+		var test2copy = test2.clone();
+		test2copy.set({ name : 'feeeeeeeeeeeed' });
+
+		outputHeader("...but not if run with .clone(true)");
+		test2copy = test2.clone(true);
+		test2copy.set({ name : 'feeeeeeeeeeeed' });
+
 
 		outputHeader("Initialising object_test");
 		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
@@ -256,8 +271,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	outputHeader('.....');
 	outputHeader('Further methods...');
 	var test3 = test.clone();
-	test3.set({ object_test: { value: 'oh noooooes'}});
 	outputLine('New object:', test3.attributes);
+	test3.set({ object_test: { value: 'oh noooooes'}});
 
 	outputHeader("Getter tests");
 	outputLine('name =', test.get('name'));
