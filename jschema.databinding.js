@@ -35,14 +35,18 @@
 	 *                     						determine record uniqueness. Defaults to 'id'.
 	 *                     - doCreateEvents:	if false, don't fire any events while constructing this
 	 *                     						object. Defaults to false.
+	 *                     - clearIdOnClone:	if true, records cloned from others can automatically have their
+	 *                     						ID fields cleared. Defaults to false.
  	 */
 	JSchema.Binding = function(attrs, schema, options)
 	{
 		this.schema = schema;
 
 		// read options
-		this.options = options;
-		this.idField = options.idField || 'id';
+		this.options = {};
+		this.options.idField		= options.idField || 'id';
+		this.options.doCreateEvents	= options.doCreateEvents || false;
+		this.options.clearIdOnClone	= options.clearIdOnClone || false;
 
 		// set initial attributes
 		this.set(attrs, !options.doCreateEvents);
@@ -62,10 +66,10 @@
 		// A model is new if it lacks an id
 		isNew : function()
 		{
-			return this.attributes[this.idField] !== undefined
-				&& this.attributes[this.idField] !== null
-				&& this.attributes[this.idField] != false
-				&& !isNaN(this.attributes[this.idField]);
+			return this.attributes[this.options.idField] !== undefined
+				&& this.attributes[this.options.idField] !== null
+				&& this.attributes[this.options.idField] != false
+				&& !isNaN(this.attributes[this.options.idField]);
 		},
 
 		// Determine whether we have an attribute
@@ -411,10 +415,17 @@
 		// Create a new model with identical attributes and validation to this one
 		clone : function(cloneEvents)
 		{
-			var obj = new this.constructor(this.attributes, this.schema, this.options);
+			// create a new, blank object with our attributes
+			var obj = new this.constructor(this.getAttributes(), this.options);
+
+			// clear the ID of the new record, if configured with one if desired
+			if (obj.options.idField && obj.options.clearIdOnClone) {
+				obj.set(obj.options.idField, null);
+			}
 
 			if (cloneEvents) {
-				obj._callbacks = this._callbacks.splice(0);
+				obj._callbacks = {};
+				JSchema.extendAndUnset(obj._callbacks, this._callbacks);
 			}
 
 			return obj;
