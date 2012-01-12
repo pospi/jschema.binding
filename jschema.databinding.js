@@ -153,16 +153,27 @@
 
 		/**
 		 * Set a hash of model attributes on the object, firing a "change" event
-		 *
-		 * :WARNING: passing 'undefined' as a value to this method will not clear the property,
-		 *			 you must always use NULL for this purpose!
+		 * @param  {mixed} attrs  May either be a string or an object. This causes the operation
+		 *                        to act in one of two ways:
+		 *                        (object) Merges this object's values in with the record's.
+		 *                        		param1 is a boolean controlling whether or not to suppress event firing
+		 *                        (string) Sets the attribute at this index (specified by dot notation).
+		 *                        		param1 is the value to set
+		 *                        		param2 is a boolean controlling whether or not to suppress event firing
 		 */
-		set : function(attrs, suppressEvent)
+		set : function(attrs, param1, param2)
 		{
 			if (!attrs) {
 				return this;
 			}
+
+			// check for dot notation property setting
+			if (typeof attrs == 'string') {
+				return this._setByIndex(attrs, param1, param2);
+			}
+
 			var now = this.attributes,
+				suppressEvent = param1,
 				changes = false;
 
 			if (!this.validate(attrs)) {
@@ -201,6 +212,56 @@
 				this.fireHeldEvents();
 			} else {
 				this.abortHeldEvents();
+			}
+
+			return this;
+		},
+
+		// Set a data attribute by dot notation index
+		_setByIndex : function(attr, newVal, suppressEvent)
+		{
+			// Create an object with the previous attribute set to modify and validate with
+			var tempAttrs = this.getAttributes();
+
+			// Search temporary object for the property to remove
+			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+			if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
+
+			var parent = searchResult[0],
+				value = parent[searchResult[1]],
+				path = searchResult[2],
+				tempPath;
+
+			// set the property and check the new attributes for errors
+			parent[searchResult[1]] = newVal;
+			if (!this.validate(tempAttrs)) {
+				// if the new attributes don't pass validation, abort. No need to return
+				// a failure case since an error callback is mandatory.
+				return this;
+			}
+
+			// copy over our current attributes to the previous
+			this._previousAttributes = this.getAttributes();
+			this.attributes = tempAttrs;
+
+			// fire events for all changes
+			if (!suppressEvent) {
+				this.holdEvents();
+
+				// fire update for the actual property affected
+				path = path.split('.');
+				tempPath = path.join('.');
+				this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), newVal, tempPath);
+				path.pop();
+
+				// fire updates for all parent properties
+				while (path.length) {
+					tempPath = path.join('.');
+					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					path.pop();
+				}
+
+				this.fireHeldEvents();
 			}
 
 			return this;
