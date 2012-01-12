@@ -103,6 +103,11 @@
 			if (attr) {
 				return JSchema.dotSearchObject(this._previousAttributes, attr) != JSchema.dotSearchObject(this.attributes, attr);
 			}
+			return this._isEqual(this.attributes, this.getPreviousAttributes());
+		},
+
+		isDirty : function()
+		{
 			return this._dirty;
 		},
 
@@ -306,6 +311,7 @@
 			// copy over our current attributes to the previous
 			this._previousAttributes = this.getAttributes();
 			this.attributes = tempAttrs;
+			this._dirty = true;
 
 			// fire events for all changes
 			if (!suppressEvent) {
@@ -395,6 +401,7 @@
 			// copy over our current attributes to the previous
 			this._previousAttributes = this.getAttributes();
 			this.attributes = tempAttrs;
+			this._dirty = true;
 
 			// fire events for all changes
 			if (!suppressEvent) {
