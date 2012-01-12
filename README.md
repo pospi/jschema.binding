@@ -57,21 +57,21 @@ The APIs, Let Me Show You Them
 >
 > Once you have your record definition ready, you can bind events to it and begin creating instances:
 >
-> <code>
+> ```
 >    var person = JSchema.Binding.Create({ ... });
 >	 person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
 >	 var Jimmy = new person({ ... });
 >	 Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
-> </code>
+> ```
 
 > You can add events to particular instances too, if you wish:
 >
-> <code>
+> ```
 >    Jimmy.addEvent('change.update.name', function() { alert('Thank god! Jimmy changed his name back.'); });
 >	 Jimy.set({name : 'Jimmy'});		
 >	 // "Thank god! Jimmy changed his name back."
 >    // "My name is now Jimmy"
-> </code>
+> ```
 >
 > Events
 > ------
