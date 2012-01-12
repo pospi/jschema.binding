@@ -42,8 +42,7 @@
 		this.idField = options.idField || 'id';
 
 		// set initial attributes
-		var noEvents = !!options.skipCreateEvents;
-		this.set(attrs, noEvents);
+		this.set(attrs, !options.doCreateEvents);
 	};
 
 	JSchema.extendAndUnset(JSchema.Binding.prototype, {
@@ -193,7 +192,7 @@
 				}
 			}
 
-			if (changes) {
+			if (changes && !suppressEvent) {
 				// Fire the "change" event if the model has been changed
 				this.change();
 				this.fireHeldEvents();
@@ -494,6 +493,7 @@
 	// Creates a Binding subclass with the desired validation schema and options
 	JSchema.Binding.Create = function(schema, options)
 	{
+		options = options || {};
 		var ctor = function(attrs) {
 			JSchema.Binding.call(this, attrs, schema, options);
 		};
