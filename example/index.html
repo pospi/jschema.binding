@@ -222,11 +222,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 		outputHeader("Instance events are ignored when cloning...");
 		var test2copy = test2.clone();
+		outputLine('new record:', test2copy.getAll());
 		test2copy.set({ name : 'derp' });
 
 		outputHeader("...but not if run with .clone(true)");
-		test2copy = test2.clone(true);
-		test2copy.set({ name : 'burp' });
+		var test2copy2 = test2.clone(true);
+		test2copy2.set({ name : 'burp' });
 
 
 		outputHeader("Initialising object_test");
