@@ -503,8 +503,8 @@
 	JSchema.Binding.Create = function(schema, options)
 	{
 		options = options || {};
-		var ctor = function(attrs) {
-			JSchema.Binding.call(this, attrs, schema, options);
+		var ctor = function(attrs, instanceOpts) {
+			JSchema.Binding.call(this, attrs, schema, instanceOpts || options);
 		};
 
 		// add methods
