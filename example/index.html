@@ -126,8 +126,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    // Some callbacks to test the object's events
 
 	    // object is modified
-	    function change(record) {
-		    outputLine('( change )');
+	    function change(boundTo, record, prevValues) {
+		    outputLine('( ' + boundTo + ' )', record, prevValues);
 		}
 		// object modification was rejected as it did not pass validation
 	    function errored(record, errs) {
@@ -143,9 +143,14 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	    // We can bind events to every instance of a model...
 	    // (note that this must be done prior to creating records for them to inherit these base events)
-	    TestModel.prototype.addEvent('change', change);				// do something when any record changes
+
+	   	// do something when any record changes
+	    TestModel.prototype.addEvent('change', function(record, old) { change('change', record, old); });
+	    // do something when any property is created
+	    TestModel.prototype.addEvent('change.create', function(record, old) { change('change.create', record, old); });
+	    // do something when the 'name' property of the record record changes
 		TestModel.prototype.addEvent('change.update.name', function (record, oldval, newval, attr, eventName) {
-			propChange("change.update.name", record, oldval, newval, attr, eventName);	// do something when the 'name' property of any record changes
+			propChange("change.update.name", record, oldval, newval, attr, eventName);
 		});
 
 	    // ...or we can create a new data record...
@@ -298,6 +303,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	outputHeader('Final object:', test3.attributes);
 	outputLine('And value of object_test beforehand:', test3.getPrevious('object_test'));
 	outputLine('Changed attributes were:', test3.getChangedAttributes());
+
+	outputHeader("Doing something bad");
+	test.set('object_test.key', 10);
 
 	/*outputHeader('Clearing...');
 	test3.clear();
