@@ -160,7 +160,8 @@
 			if (!attrs) {
 				return this;
 			}
-			var now = this.attributes;
+			var now = this.attributes,
+				changes = false;
 
 			if (!this.validate(attrs)) {
 				return false;
@@ -178,11 +179,13 @@
 					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
 					now[attr] = result[0];
 					if (result[1]) {
+						changes = true;
 						this._dirty = true;
 					}
 				} else if (!this._isEqual(now[attr], val)) {						// scalar property setting
 					var oldVal = now[attr];
 					now[attr] = val;
+					changes = true;
 					this._dirty = true;
 					if (!suppressEvent) {
 						this._propertyChange(attr, (val === undefined ? 'delete' : 'update'), oldVal, val, attr);
@@ -190,7 +193,7 @@
 				}
 			}
 
-			if (!suppressEvent) {
+			if (changes) {
 				// Fire the "change" event if the model has been changed
 				this.change();
 				this.fireHeldEvents();
