@@ -213,9 +213,11 @@
 			// Search temporary object for the property to remove
 			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
 			if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
-			var parent = searchResult[0];
-			var value = parent[searchResult[1]];
-			var path = searchResult[2];
+
+			var parent = searchResult[0],
+				value = parent[searchResult[1]],
+				path = searchResult[2],
+				tempPath;
 
 			// remove the property from the original temp object by reference
 			delete parent[searchResult[1]];
@@ -229,9 +231,24 @@
 			this._previousAttributes = this.getAttributes();
 			this.attributes = tempAttrs;
 
-			// Fire "change" events if desired
+			// fire events for all changes
 			if (!suppressEvent) {
-				this._propertyChange(path, 'delete', value, undefined, path);	// fire a change event for the attribute removed
+				this.holdEvents();
+
+				// fire deletion for the actual property affected
+				path = path.split('.');
+				tempPath = path.join('.');
+				this._propertyChange(tempPath, 'delete', value, undefined, tempPath);
+				path.pop();
+
+				// fire updates for all parent properties
+				while (path.length) {
+					tempPath = path.join('.');
+					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					path.pop();
+				}
+
+				this.fireHeldEvents();
 			}
 
 			return this;
@@ -252,10 +269,12 @@
 				return false;
 			}
 
+			// update data
 			this._previousAttributes = this.getAttributes();
 			this.attributes = {};
 			this._dirty = true;
 
+			// run change events
 			if (!suppressEvent) {
 				this.holdEvents();
 
