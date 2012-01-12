@@ -190,6 +190,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			"change.create.categories.?" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.create.categories.?", record, oldval, newval, attr, eventName);
 			},	// do something when an array is appended to (for each item appended)
+			"change.delete.categories.?" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.delete.categories.?", record, oldval, newval, attr, eventName);
+			},	// do something when an item is removed from an array
 			"change.*.price" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.*.price", record, oldval, newval, attr, eventName);
 			},				// do something when any "price" value in any object changes
@@ -284,6 +287,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	outputHeader('Unsetting a property using a dot-notation index');
 	test3.unset('object_test.value');
+
+	outputHeader('Setting a property using a dot-notation index');
+	test3.set('object_test.key', 'newone');
 
 	outputHeader('Appending to an array');
 	test3.push('categories', 99);
