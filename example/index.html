@@ -213,7 +213,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		})
 		outputLine('record constructed:', test2.getAll());
 		test2.addEvent('change.update.name', function(record, oldval, newval, attr, eventName) {
-			propChange("change.update.name", record, oldval, newval, attr, eventName);
+			propChange("change.update.name [instance]", record, oldval, newval, attr, eventName);
 		});				// do something in addition to the model's change event when this record changes
 
 		outputHeader("Setting name on the second record");
