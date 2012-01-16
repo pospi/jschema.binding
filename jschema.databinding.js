@@ -375,6 +375,7 @@
 		 * Array helper for appending elements to an array property
 		 *
 		 * @throws	an error if target variable is not an array
+		 * @return the new array key added (length - 1)
 		 */
 		push : function(attr, val, suppressEvent)
 		{
@@ -388,6 +389,7 @@
 			var parent = searchResult[0],
 				value = parent[searchResult[1]],
 				path = searchResult[2],
+				newLen = value.length,
 				tempPath;
 
 			// append to the target array, assuming it is one. If not, an error will be thrown.
@@ -422,7 +424,7 @@
 				this.fireHeldEvents();
 			}
 
-			return this;
+			return newLen;
 		},
 
 		//=============================================================================================
