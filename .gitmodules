@@ -1,0 +1,6 @@
+[submodule "lib/jsv"]
+	path = lib/jsv
+	url = git://github.com/garycourt/JSV.git
+[submodule "lib/json"]
+	path = lib/json
+	url = git://github.com/douglascrockford/JSON-js.git
