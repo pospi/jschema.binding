@@ -459,7 +459,7 @@
 		// Calling this will cause all callbacks listening to the record to run
 		change : function(options)
 		{
-			this.fireEvent('change', this.attributes, this.getPreviousAttributes());
+			this.fireEvent('change', this, this.getPreviousAttributes());
 		},
 
 		//=============================================================================================
