@@ -30,6 +30,8 @@ Binding performs no ajax operations and is not a full MVC framework, but could e
 >		  Allows events to be pooled, combined and fired as a single logical 'change'. 
 > 		- **Data consistency**<br />
 >		  Record state is predictable in all callbacks - firing is deferred until the state of the object has completed updating.
+>	- **Change handling**<br />
+>	  Objects can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those updated.  
 >
 > Compatibility
 > -------------
@@ -38,41 +40,73 @@ Binding performs no ajax operations and is not a full MVC framework, but could e
 > **Branches**:
 > `git checkout mootools`
 
-The APIs, Let Me Show You Them
+Initialisation
+--------------
+The first thing you'll want to do with a Binding instance is create a 'class' for it. To do this, you simply call `JSchema.Binding.Create(schema, options)`:
+
+> **Schema**<br />
+> The JSON schema document used to validate this record, as a javascript object.
+>
+> **Options**<br />
+> A map of options for the new record class.
+> 
+>> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the method `getId()` to retrieve object IDs.
+> - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
+>> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if our schema prohibits records without an ID field!
+
+Once you have your record definition ready, you can bind events to it and begin creating instances:
+
+```
+    var person = JSchema.Binding.Create({ ... });
+	 person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
+	 var Jimmy = new person({ ... });
+	 Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
+```
+You can add events to particular instances too, if you wish:
+
+```
+    Jimmy.addEvent('change.update.name', function() { alert('Thank god! Jimmy changed his name back.'); });
+	Jimmy.set({name : 'Jimmy'});		
+	 // "Thank god! Jimmy changed his name back."
+    // "My name is now Jimmy"
+```
+
+In normal usage, you'll probably first want to pull down your JSON schema files and record data from an external source. You would typically do something like the following:
+	
+	// create a data model for validation
+	var schema = jQuery.getJSON(/* some URL containing a validation schema... */);
+	var Model = JSchema.Binding.Create(schema, {
+		idField : 'record_id',
+		clearIdOnClone : true
+	});
+
+	// bind some events to these records
+	Model.addEvent('change', function(record, prevData) {
+		// update something...
+	});
+	// ...
+
+	// load and create a record
+	var data = jQuery.getJSON(/* some URL containing a record... */);
+	var something = new Model(data);
+
+	// updating the record triggers events
+	something.set({
+		someProperty : 'some value'
+	});
+	// change callback triggered, something updated!
+
+	// later in our program, we can check if the record needs saving...
+	if (something.isDirty()) {
+		// and update by posting the entire record back...
+		jQuery.post(/* some URL for updating the record */, something.getAll());
+		// ...or just the changes.		
+		jQuery.post(/* some URL for updating the record */, something.getChangedAttributes());
+	}
+
+My APIs, Let Me Show You Them
 -----------------------------
 
-> Initialisation
-> --------------
-> The first thing you'll want to do with a Binding instance is create a 'class' for it. To do this, you simply call `JSchema.Binding.Create(schema, options)`:
->
->> **Schema**<br />
->> The JSON schema document used to validate this record, as a javascript object.
->>
->> **Options**<br />
->> A map of options for the new record class.
->> 
->> - `idField` Setting this property enables you to manage your record objects by primary key or other identifying information, using the method `getId()` to retrieve object IDs.
->> - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
->> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if your schema prohibits records without an ID field!
->
-> Once you have your record definition ready, you can bind events to it and begin creating instances:
->
-> ```
->    var person = JSchema.Binding.Create({ ... });
->	 person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
->	 var Jimmy = new person({ ... });
->	 Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
-> ```
-
-> You can add events to particular instances too, if you wish:
->
-> ```
->    Jimmy.addEvent('change.update.name', function() { alert('Thank god! Jimmy changed his name back.'); });
->	 Jimy.set({name : 'Jimmy'});		
->	 // "Thank god! Jimmy changed his name back."
->    // "My name is now Jimmy"
-> ```
->
 > Events
 > ------
 > JSchema.Binding objects recognise the following events:
