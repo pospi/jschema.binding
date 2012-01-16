@@ -127,7 +127,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	    // object is modified
 	    function change(boundTo, record, prevValues) {
-		    outputLine('( ' + boundTo + ' )', record, prevValues);
+		    outputLine('( ' + boundTo + ' )', prevValues, '->', record.getAttributes());
 		}
 		// object modification was rejected as it did not pass validation
 	    function errored(record, errs) {
