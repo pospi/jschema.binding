@@ -434,7 +434,13 @@
 		clone : function(cloneEvents)
 		{
 			// create a new, blank object with our attributes
-			var obj = new this.constructor(this.getAttributes(), this.options);
+			var newCtor = function(){},
+				obj;
+
+			JSchema.extendAndUnset(newCtor.prototype, this.Model.prototype);
+
+			obj = new newCtor();
+			JSchema.Binding.call(obj, this.getAttributes(), this.schema, this.options);
 
 			// clear the ID of the new record, if configured with one if desired
 			if (obj.options.idField && obj.options.clearIdOnClone) {
@@ -639,6 +645,9 @@
 
 	}, JSchema.EventHandler);
 
+	// Alias methods
+	JSchema.Binding.prototype.getAll = JSchema.Binding.prototype.getAttributes;
+
 	//=============================================================================================
 	// Static methods
 
@@ -647,14 +656,21 @@
 	{
 		options = options || {};
 		var ctor = function(attrs, instanceOpts) {
-			JSchema.Binding.call(this, attrs, schema, instanceOpts || options);
+			var newCtor = function(){},
+				newO;
+
+			JSchema.extendAndUnset(newCtor.prototype, ctor.prototype);
+			// console.log(newO, newCtor.prototype === newO.prototype);
+
+			newO = new newCtor();
+			newO.Model = ctor;
+			JSchema.Binding.call(newO, attrs, schema, instanceOpts || options);
+
+			return newO;
 		};
 
 		// add methods
 		JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
-
-		// add some alias methods
-		ctor.prototype.getAll = ctor.prototype.getAttributes;
 
 		return ctor;
 	};
