@@ -263,6 +263,26 @@ JSchema.EventHandler = {
 	},
 
 	/**
+	 * Determine whether an event was fired during the current marshalling phase
+	 * @param  {string} eventName name of event to check
+	 * @return {boolean}
+	 */
+	eventQueued : function(eventName)
+	{
+		return this._marshalledEvents[eventName] ? true : false;
+	},
+
+	/**
+	 * Remove a previously marshalled event from those fired
+	 * @param  {string} eventName event name to unfire
+	 */
+	unfireEvent : function(eventName)
+	{
+		delete this._marshalledEvents[eventName];
+		return this;
+	},
+
+	/**
 	 * Returns a shallow copy of our own callback register for processing
 	 * @return {object}
 	 */
