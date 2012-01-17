@@ -68,6 +68,22 @@
 			return this.instances[id] || null;
 		},
 
+		getInstanceCount : function()
+		{
+			var count = 0;
+			for (var i in this.instances) {
+				if (this.instances.hasOwnProperty(i)) {
+					count++;
+				}
+			}
+			return count;
+		},
+
+		getAllInstances : function()
+		{
+			return this.instances;
+		},
+
 		//======= Current state ========
 
 		// A model is new if it lacks an id

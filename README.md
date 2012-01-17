@@ -50,7 +50,7 @@ The first thing you'll want to do with a Binding instance is create a *model* (t
 > **Options**<br />
 > A map of options for the new record class.
 >
->> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the Record method `getId()` to retrieve object IDs, and Model method `getRecordById()` to retrieve record instances by those IDs. 
+>> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the Record method `getId()` to retrieve object IDs, and Model method `getRecordById()` to retrieve record instances by those IDs.
 > - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
 >> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if our schema prohibits records without an ID field!
 
@@ -179,6 +179,10 @@ My APIs, Let Me Show You Them
 >>>
 >>> - `getRecordById(id)`
 >>>   When the `idField` option is provided, records are automatically referenced in their corresponding models. This method can be used to retrieve them by those IDs.
+>>> - `getInstanceCount()`
+>>>   Retrieve the number of active Records of this Model. This only returns the count of records with an ID - new ones are ignored.
+>>> - `getAllInstances()`
+>>>   Get a map of all active records, indexed by ID.
 >>
 >> Event handling (`JSchema.EventHandler`)
 >> ---------------------------------------
