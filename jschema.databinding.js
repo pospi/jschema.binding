@@ -73,10 +73,7 @@
 		// A model is new if it lacks an id
 		isNew : function()
 		{
-			return this.attributes[this.options.idField] !== undefined
-				&& this.attributes[this.options.idField] !== null
-				&& this.attributes[this.options.idField] != false
-				&& !isNaN(this.attributes[this.options.idField]);
+			return this.getId() == null;
 		},
 
 		// Determine whether we have an attribute
@@ -91,6 +88,12 @@
 		get : function(attr)
 		{
 			return JSchema.dotSearchObject(this.attributes, attr);
+		},
+
+		// get the record ID. only works when idField option is provided
+		getId : function()
+		{
+			return this.get(this.options.idField) || null;
 		},
 
 		// Return a copy of our attributes
@@ -243,6 +246,12 @@
 			}
 
 			return this;
+		},
+
+		// set the record ID. only works when idField option is provided
+		setId : function(val)
+		{
+			return this.set(this.options.idField, val);
 		},
 
 		// Set a data attribute by dot notation index
@@ -455,7 +464,7 @@
 
 			// clear the ID of the new record, if configured with one if desired
 			if (obj.options.idField && obj.options.clearIdOnClone) {
-				obj.set(obj.options.idField, null);
+				obj.setId(null);
 			}
 
 			if (cloneEvents) {
