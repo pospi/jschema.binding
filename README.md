@@ -147,6 +147,8 @@ My APIs, Let Me Show You Them
 >>	 * `string`, `mixed`, `bool`<br />
 >>	   Sets the attribute at this index (specified by dot notation).
 >>	   Param 2 is the value to set, param 3 controls whether (true) or not (false) to suppress event firing.
+>>	 * `setId(newId)`
+>>	   Sets the record's Id, which can be any scalar value. `idField` must be configured in options for this method to work.
 >> * `unset(attribute, suppressEvent)`<br />
 >>	 Unsets one of the record's attributes. Accepts 2 parameters: the property to erase (dot notation) and a boolean to allow suppressing event firing.
 >> * `clear(suppressEvent)`<br />
