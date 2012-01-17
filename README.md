@@ -5,7 +5,7 @@ JSchema.Binding
 
 About
 -----
-JSchema.Binding is a lightweight framework for managing complex, data-driven UIs. It allows for binding UI callbacks to data records and for manipulating those records' data. In a nutshell, it basically serves to keep your UI fresh, synchronised and responsive. Everything else is up to you.
+JSchema.Binding is a lightweight framework for managing complex, data-driven UIs. It allows for binding UI callbacks to data *models* and *records* (or instances), and for manipulating those records' data. In a nutshell, it basically serves to keep your UI fresh, synchronised and responsive. Everything else is up to you.
 
 Binding performs no ajax operations and is not a full MVC framework, but could easily be used as a strong foundation to build one. If you are after something more heavyweight, try the excellent [http://backbonejs.org/](Backbone.js) (which indeed influences some of Binding's design).
 
@@ -31,7 +31,7 @@ Binding performs no ajax operations and is not a full MVC framework, but could e
 > 		- **Data consistency**<br />
 >		  Record state is predictable in all callbacks - firing is deferred until the state of the object has completed updating.
 >	- **Change handling**<br />
->	  Objects can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those updated.
+>	  Records can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those updated.
 >
 > Compatibility
 > -------------
@@ -42,7 +42,7 @@ Binding performs no ajax operations and is not a full MVC framework, but could e
 
 Initialisation
 --------------
-The first thing you'll want to do with a Binding instance is create a 'class' for it. To do this, you simply call `JSchema.Binding.Create(schema, options)`:
+The first thing you'll want to do with a Binding instance is create a *model* (think 'class') for it. To do this, you simply call `JSchema.Binding.Create(schema, options)`:
 
 > **Schema**<br />
 > The JSON schema document used to validate this record, as a javascript object.
@@ -50,15 +50,15 @@ The first thing you'll want to do with a Binding instance is create a 'class' fo
 > **Options**<br />
 > A map of options for the new record class.
 >
->> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the method `getId()` to retrieve object IDs.
+>> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the Record method `getId()` to retrieve object IDs, and Model method `getRecordById()` to retrieve record instances by those IDs. 
 > - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
 >> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if our schema prohibits records without an ID field!
 
-Once you have your record definition ready, you can bind events to it and begin creating instances:
+Once you have your model ready, you can bind events to it and begin creating instances:
 
 ```
-    var person = JSchema.Binding.Create({ ... });
-	 person.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
+     var person = JSchema.Binding.Create({ ... });
+	 person.prototype.addEvent('change.update.name', function(newName) { alert('My name is now ' + newName); });
 	 var Jimmy = new person({ ... });
 	 Jimmy.set({name : 'Denny'}); 	// "My name is now Denny"
 ```
@@ -109,7 +109,7 @@ My APIs, Let Me Show You Them
 
 > Events
 > ------
-> JSchema.Binding objects recognise the following events:
+> JSchema.Binding records recognise the following events:
 >
 > - `error`<br />
 >	Fires in response to an error updating the data record. Receives the record instance and an error object from JSV as its parameters:
@@ -147,14 +147,14 @@ My APIs, Let Me Show You Them
 >>	 * `string`, `mixed`, `bool`<br />
 >>	   Sets the attribute at this index (specified by dot notation).
 >>	   Param 2 is the value to set, param 3 controls whether (true) or not (false) to suppress event firing.
->>	 * `setId(newId)`
->>	   Sets the record's Id, which can be any scalar value. `idField` must be configured in options for this method to work.
+>> * `setId(newId)`
+>>   Sets the record's Id, which can be any scalar value. `idField` must be configured in options for this method to work.
 >> * `unset(attribute, suppressEvent)`<br />
 >>	 Unsets one of the record's attributes. Accepts 2 parameters: the property to erase (dot notation) and a boolean to allow suppressing event firing.
 >> * `clear(suppressEvent)`<br />
 >>	 Clear all data from the record. You may wish to override this method to reset the record's data to a clean state if your schema prohibits an empty record.
 >> * `clone(cloneEvents)`<br />
->>	 Creates a duplicate of the record. If `true` is passed, the original object's instance events are copied as well. If the record's `idField` and `clearIdOnClone` options are set, this may also clear the new object's id attribute.
+>>	 Creates a duplicate of the record. If `true` is passed, the original record's instance events are copied as well. If the record's `idField` and `clearIdOnClone` options are set, this may also clear the new record's id attribute.
 >> * `validate(newData)`<br />
 >>	 Manually perform validation of some data against the record. The supplied data will be merged in to the record's current attributes and checked for validity.
 >> * `push(attribute, value, suppressEvent)`<br />
@@ -172,6 +172,13 @@ My APIs, Let Me Show You Them
 >>	 Return the record's ID. Only works if `idField` has been set.
 >> - `getAttributes()` / `getAll()`<br />
 >>	 Retrieve a copy of the complete data record from the Binding.
+>>
+>>> Static Methods
+>>> --------------
+>>> These methods are only available on record Model instances.
+>>>
+>>> - `getRecordById(id)`
+>>>   When the `idField` option is provided, records are automatically referenced in their corresponding models. This method can be used to retrieve them by those IDs.
 >>
 >> Event handling (`JSchema.EventHandler`)
 >> ---------------------------------------
