@@ -61,6 +61,13 @@
 		//=============================================================================================
 		//	Accessors
 
+		//======= Object querying (class methods) ========
+
+		getRecordById : function(id)
+		{
+			return this.instances[id] || null;
+		},
+
 		//======= Current state ========
 
 		// A model is new if it lacks an id
@@ -443,6 +450,7 @@
 			JSchema.extendAndUnset(newCtor.prototype, this.Model.prototype);
 
 			obj = new newCtor();
+			obj.Model = this.Model;
 			JSchema.Binding.call(obj, this.getAttributes(), this.schema, this.options);
 
 			// clear the ID of the new record, if configured with one if desired
@@ -469,7 +477,9 @@
 		//	Internals
 
 		/**
-		 * Fire a change event for one of the record's properties changing
+		 * Fire a change event for one of the record's properties changing. Also handles reassignment
+		 * of the record in its model's instance array when options.idField is set.
+		 *
 		 * @param  {string} propertyString name of the property changed (dot notation)
 		 * @param  {string} isCreating	if true, record is being created. Used to determine change subevent name.
 		 * @param  {mixed} oldValue		value of the attribute before the change
@@ -493,6 +503,17 @@
 				stopAtLevel = propertyString.split('.').length + 1;
 			} else {
 				changeAction = 'update';
+			}
+
+			// check for id being set and reassign in instance map
+			if (this.options.idField && propertyString == this.options.idField) {
+				var oldId;
+				if (oldId = this.getPrevious(propertyString)) {
+					delete this.Model.instances[oldId];
+				}
+				if (newValue) {
+					this.Model.instances[newValue] = this;
+				}
 			}
 
 			var eventName = 'change.' + changeAction + '.' + propertyString;
@@ -686,11 +707,23 @@
 			newO.Model = ctor;
 			JSchema.Binding.call(newO, attrs, schema, instanceOpts || options);
 
+			if (newO.options.idField) {
+				var newId = newO.getId();
+				if (newId) {
+					ctor.instances[newId] = newO;
+				}
+			}
+
 			return newO;
 		};
 
 		// add methods
 		JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
+
+		// add static array for storing instances of this record type, and
+		// a static method for retrieving them
+		ctor.instances = {};
+		ctor.getRecordById = ctor.prototype.getRecordById;
 
 		return ctor;
 	};
