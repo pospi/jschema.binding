@@ -166,6 +166,30 @@ JSchema.EventHandler = {
 	},
 
 	/**
+	 * Trigger an event, but only fire it back up the namespace chain until
+	 * there are the given number of namespace levels remaining.
+	 * @param  {string} eventName event to fire
+	 * @param  {int}    depth     depth of event callback namespaces at which to abort bubbling
+	 * @return TRUE if some callbacks were executed
+	 */
+	fireEventUntilDepth : function(eventName, depth)
+	{
+		var args = Array.prototype.slice.call(arguments, 2);
+
+		if (this._marshalling) {
+			if (typeof this._marshalledEvents[eventName] == 'undefined') {
+				this._marshalledEvents[eventName] = [];
+			}
+			this._marshalledEvents[eventName].push([args, undefined, depth]);
+			return true;	// :TODO: yeah, we *kinda* fired it...
+		}
+
+		if (!(this._callbacks)) return false;
+
+		return this._processEventCallbacks(eventName, args, this._getEventCallbacks(), depth);
+	},
+
+	/**
 	 * Event marshalling - begin collecting fired events in order to fire
 	 * them simultaneously sometime later without re-firing callbacks
 	 * from overlapping namespaces.
@@ -206,7 +230,7 @@ JSchema.EventHandler = {
 
 			list = this._marshalledEvents[currEvent];
 			for (i = 0, l = list.length; i < l; ++i) {
-				if ( this._processEventCallbacks(currEvent, list[i][0], calls) ) {
+				if ( this._processEventCallbacks(currEvent, list[i][0], calls, list[i][2]) ) {
 					fired = true;
 				}
 			}
@@ -262,11 +286,13 @@ JSchema.EventHandler = {
 	 * @param  {array}  args      arguments to the event's callbacks
 	 * @param  {object} calls     object mapping callback functions to event names. Events
 	 *                            fired will be removed from this object after processing.
+	 * @param  {int}    stopAt    if >0, events will stop bubbling when they reach this namespace depth
 	 * @return {boolean}  a flag indicating whether callbacks were fired
 	 */
-	_processEventCallbacks : function(eventName, args, calls)
+	_processEventCallbacks : function(eventName, args, calls, stopAt)
 	{
 		var list,				// current callback list for executing
+			callbackNamespaces,	// current callback namespace components array
 			executions = false;	// return flag to specify whether callbacks were fired
 
 		this._lastEventCancelled = false;
@@ -285,8 +311,15 @@ JSchema.EventHandler = {
 				continue;
 			}
 
+			callbackNamespaces = boundEvt.split('.');
+
+			// determine whether this event should actually propagate up to this callback
+			if (stopAt && callbackNamespaces.length <= stopAt) {
+				continue;
+			}
+
 			// determine whether the fired event matches us
-			if (!this._eventMatches(firedEvent, boundEvt.split('.'))) {
+			if (!this._eventMatches(firedEvent, callbackNamespaces)) {
 				continue;		// :TODO: order them and make this break
 			}
 

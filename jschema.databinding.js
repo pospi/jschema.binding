@@ -49,7 +49,7 @@
 		this.options.clearIdOnClone	= options.clearIdOnClone || false;
 
 		// set initial attributes
-		this.set(attrs, !options.doCreateEvents);
+		this.set(attrs, !options.doCreateEvents, undefined, true);
 	};
 
 	JSchema.extendAndUnset(JSchema.Binding.prototype, {
@@ -178,8 +178,9 @@
 		 *                        (string) Sets the attribute at this index (specified by dot notation).
 		 *                        		param1 is the value to set
 		 *                        		param2 is a boolean controlling whether or not to suppress event firing
+		 * @param bool isCreating  (optional) if true, fire create events instead of updates
 		 */
-		set : function(attrs, param1, param2)
+		set : function(attrs, param1, param2, isCreating)
 		{
 			if (!attrs) {
 				return this;
@@ -207,7 +208,7 @@
 				var val = attrs[attr];
 				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val))	/* LIBCOMPAT */
 				  || (jQuery.isArray(now[attr]) && jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
-					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent);
+					var result = this._handleObjectChange(attr, now[attr], val, suppressEvent, isCreating);
 					now[attr] = result[0];
 					if (result[1]) {
 						changes = true;
@@ -219,12 +220,14 @@
 					changes = true;
 					this._dirty = true;
 					if (!suppressEvent) {
-						this._propertyChange(attr, (val === undefined ? 'delete' : 'update'), oldVal, val, attr);
+						this._propertyChange(attr, isCreating, oldVal, val, attr);
 					}
 				}
 			}
 
 			if (changes && !suppressEvent) {
+				// fire a general update event
+				this.fireEvent((isCreating ? 'change.create' : 'change.update'), this, this.getPreviousAttributes());
 				// Fire the "change" event if the model has been changed
 				this.change();
 				this.fireHeldEvents();
@@ -269,13 +272,13 @@
 				// fire update for the actual property affected
 				path = path.split('.');
 				tempPath = path.join('.');
-				this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), newVal, tempPath);
+				this._propertyChange(tempPath, false, this.getPrevious(tempPath), newVal, tempPath);
 				path.pop();
 
 				// fire updates for all parent properties
 				while (path.length) {
 					tempPath = path.join('.');
-					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
 					path.pop();
 				}
 
@@ -320,13 +323,13 @@
 				// fire deletion for the actual property affected
 				path = path.split('.');
 				tempPath = path.join('.');
-				this._propertyChange(tempPath, 'delete', value, undefined, tempPath);
+				this._propertyChange(tempPath, false, value, undefined, tempPath);
 				path.pop();
 
 				// fire updates for all parent properties
 				while (path.length) {
 					tempPath = path.join('.');
-					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
 					path.pop();
 				}
 
@@ -361,7 +364,7 @@
 				this.holdEvents();
 
 				for (attr in old) {
-					this._propertyChange(attr, 'delete', old[attr], undefined, attr);	// fire change events for all removed attributes
+					this._propertyChange(attr, false, old[attr], undefined, attr);	// fire change events for all removed attributes
 				}
 				this.change();
 
@@ -411,13 +414,13 @@
 
 				// fire creation for the actual array index affected
 				tempPath = path + '.' + (value.length - 1);
-				this._propertyChange(tempPath, 'create', undefined, val, tempPath);
+				this._propertyChange(tempPath, false, undefined, val, tempPath);
 
 				// fire updates for all parent properties
 				path = path.split('.');
 				while (path.length) {
 					tempPath = path.join('.');
-					this._propertyChange(tempPath, 'update', this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
 					path.pop();
 				}
 
@@ -468,15 +471,32 @@
 		/**
 		 * Fire a change event for one of the record's properties changing
 		 * @param  {string} propertyString name of the property changed (dot notation)
-		 * @param  {string} changeAction	subevent of the change event (create, update or delete)
+		 * @param  {string} isCreating	if true, record is being created. Used to determine change subevent name.
 		 * @param  {mixed} oldValue		value of the attribute before the change
 		 * @param  {mixed} newValue		new value of the attribute currently in the object
 		 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
 		 */
-		_propertyChange : function(propertyString, changeAction, oldValue, newValue, attrIndex)
+		_propertyChange : function(propertyString, isCreating, oldValue, newValue, attrIndex)
 		{
+			var changeAction,
+				stopAtLevel = 0;
+
+			if (isCreating || oldValue === undefined) {
+				changeAction = 'create';
+				if (!isCreating) {
+					// trailing create & delete events shouldn't bubble - update callback will run instead for higher attributes
+					stopAtLevel = propertyString.split('.').length + 1;
+				}
+			} else if (newValue === undefined) {
+				changeAction = 'delete';
+				// trailing create & delete events shouldn't bubble - update callback will run instead for higher attributes
+				stopAtLevel = propertyString.split('.').length + 1;
+			} else {
+				changeAction = 'update';
+			}
+
 			var eventName = 'change.' + changeAction + '.' + propertyString;
-			this.fireEvent(eventName, this, oldValue, newValue, attrIndex, eventName);
+			this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, attrIndex, eventName);
 		},
 
 		/**
@@ -509,7 +529,7 @@
 		 *                        		with '.' + the subattribute name.
 		 * @return	2-length array of the merged object, and a boolean indicating whether subproperties were modified.
 		 */
-		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent)
+		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent, isCreating)
 		{
 			var childrenChanged = false;
 
@@ -553,7 +573,7 @@
 
 					// if children were modified, fire a change event for us too!
 					if (results[1] && !suppressEvent) {
-						this._propertyChange(newEventStr, 'update', src, oldObject[name], newEventStr);
+						this._propertyChange(newEventStr, isCreating, src, oldObject[name], newEventStr);
 					}
 				} else if (src != copy) {
 					oldObject[ name ] = copy;
@@ -561,7 +581,7 @@
 
 					// fire a change event for the modified property
 					if (!suppressEvent) {
-						this._propertyChange(newEventStr, (copy === undefined ? 'delete' : 'update'), src, copy, newEventStr);
+						this._propertyChange(newEventStr, isCreating, src, copy, newEventStr);
 					}
 				}
 			}
@@ -574,7 +594,7 @@
 				var i = newObject.length;
 				if (!suppressEvent) {
 					while (i < previousObject.length) {
-						this._propertyChange(eventStr + '.' + i, 'delete', previousObject[i], undefined, eventStr + '.' + i);
+						this._propertyChange(eventStr + '.' + i, isCreating, previousObject[i], undefined, eventStr + '.' + i);
 						++i;
 					}
 				}
@@ -583,7 +603,7 @@
 
 			// fire a change event for ourselves when bubbling back up
 			if (childrenChanged && !suppressEvent) {
-				this._propertyChange(eventStr, 'update', previousObject, oldObject, eventStr);
+				this._propertyChange(eventStr, isCreating, previousObject, oldObject, eventStr);
 			}
 
 			return [oldObject, childrenChanged];
