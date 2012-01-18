@@ -179,10 +179,10 @@ My APIs, Let Me Show You Them
 >>>
 >>> - `getRecordById(id)`
 >>>   When the `idField` option is provided, records are automatically referenced in their corresponding models. This method can be used to retrieve them by those IDs.
->>> - `getInstanceCount()`
->>>   Retrieve the number of active Records of this Model. This only returns the count of records with an ID - new ones are ignored.
->>> - `getAllInstances()`
->>>   Get a map of all active records, indexed by ID.
+>>> - `getInstanceCount(includeNew = false)`
+>>>   Retrieve the number of active Records of this Model. By default, only saved records (those with IDs) are returned. To return all objects, pass <tt>true</tt>.
+>>> - `getAllInstances(includeNew = false)`
+>>>   Get a map of all active records, indexed by ID. If <tt>true</tt> is passed, unsaved records will be returned as well under the indexes '<tt>new#0</tt>', '<tt>new#1</tt>' etc 
 >>
 >> Event handling (`JSchema.EventHandler`)
 >> ---------------------------------------
