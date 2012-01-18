@@ -749,6 +749,8 @@
 		// a static method for retrieving them
 		ctor.instances = {};
 		ctor.getRecordById = ctor.prototype.getRecordById;
+		ctor.getInstanceCount = ctor.prototype.getInstanceCount;
+		ctor.getAllInstances = ctor.prototype.getAllInstances;
 
 		return ctor;
 	};
