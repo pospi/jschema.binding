@@ -46,7 +46,7 @@
 		this.options = {};
 		this.options.idField		= options.idField || 'id';
 		this.options.doCreateEvents	= options.doCreateEvents || false;
-		this.options.clearIdOnClone	= options.clearIdOnClone || false;
+		this.options.clearIdOnClone	= options.clearIdOnClone === false ? false : true;
 
 		// set initial attributes
 		this.set(attrs, !options.doCreateEvents, undefined, true);
@@ -68,20 +68,33 @@
 			return this.instances[id] || null;
 		},
 
-		getInstanceCount : function()
+		getInstanceCount : function(includeUnsaved)
 		{
-			var count = 0;
+			var count = 0, instance;
 			for (var i in this.instances) {
 				if (this.instances.hasOwnProperty(i)) {
 					count++;
 				}
 			}
+			if (includeUnsaved) {
+				count += this.newInstances.length;
+			}
 			return count;
 		},
 
-		getAllInstances : function()
+		getAllInstances : function(includeUnsaved)
 		{
-			return this.instances;
+			var instances = JSchema.extendAndUnset({}, this.instances),
+				newInstanceCount = 0;
+
+			if (includeUnsaved) {
+				// count instances
+				for (var i = 0, l = this.newInstances.length; i < l; ++i) {
+					instances['new#' + newInstanceCount] = this.newInstances[i];
+					newInstanceCount++;
+				}
+			}
+			return instances;
 		},
 
 		//======= Current state ========
@@ -470,19 +483,32 @@
 		{
 			// create a new, blank object with our attributes
 			var newCtor = function(){},
-				obj;
+				obj,
+				attribs = this.getAttributes();
 
 			JSchema.extendAndUnset(newCtor.prototype, this.Model.prototype);
 
-			obj = new newCtor();
-			obj.Model = this.Model;
-			JSchema.Binding.call(obj, this.getAttributes(), this.schema, this.options);
-
-			// clear the ID of the new record, if configured with one if desired
-			if (obj.options.idField && obj.options.clearIdOnClone) {
-				obj.setId(null);
+			// clear the ID attribute for the new record, if configured
+			if (this.options.idField && this.options.clearIdOnClone) {
+				delete attribs[this.options.idField];
 			}
 
+			// create the copy
+			obj = new newCtor();
+			obj.Model = this.Model;
+			JSchema.Binding.call(obj, attribs, this.schema, this.options);
+
+			// register it with our model
+			if (obj.options.idField) {
+				var newId = obj.getId();
+				if (newId) {
+					this.Model.instances[newId] = obj;
+				} else {
+					this.Model.newInstances.push(obj);
+				}
+			}
+
+			// clone events if specified
 			if (cloneEvents) {
 				obj._callbacks = {};
 				JSchema.extendAndUnset(obj._callbacks, this._callbacks);
@@ -530,11 +556,20 @@
 				changeAction = 'update';
 			}
 
-			// check for id being set and reassign in instance map
+			// check for id being set and reassign in instances register
 			if (this.options.idField && propertyString == this.options.idField) {
 				var oldId;
 				if (oldId = this.getPrevious(propertyString)) {
+					// existing record, delete from instances array
 					delete this.Model.instances[oldId];
+				} else {
+					// new record, delete from new instances array
+					for (var i = 0, l = this.Model.newInstances.length; i < l; ++i) {
+						if (this.Model.newInstances[i] === this) {
+							this.Model.newInstances.splice(i, 1);
+							break;
+						}
+					}
 				}
 				if (newValue) {
 					if (this.Model.instances[newValue]) {
@@ -542,6 +577,8 @@
 						throw new Error("Cannot reassign record ID: record already exists");
 					}
 					this.Model.instances[newValue] = this;
+				} else {
+					this.Model.newInstances.push(this);
 				}
 			}
 
@@ -740,6 +777,8 @@
 				var newId = newO.getId();
 				if (newId) {
 					ctor.instances[newId] = newO;
+				} else {
+					ctor.newInstances.push(newO);
 				}
 			}
 
@@ -752,6 +791,7 @@
 		// add static array for storing instances of this record type, and
 		// a static method for retrieving them
 		ctor.instances = {};
+		ctor.newInstances = [];
 		ctor.getRecordById = ctor.prototype.getRecordById;
 		ctor.getInstanceCount = ctor.prototype.getInstanceCount;
 		ctor.getAllInstances = ctor.prototype.getAllInstances;
