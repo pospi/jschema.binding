@@ -537,6 +537,10 @@
 					delete this.Model.instances[oldId];
 				}
 				if (newValue) {
+					if (this.Model.instances[newValue]) {
+						// :TODO: this could be handled better after implementing undo
+						throw new Error("Cannot reassign record ID: record already exists");
+					}
 					this.Model.instances[newValue] = this;
 				}
 			}
