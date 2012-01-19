@@ -52,7 +52,7 @@ The first thing you'll want to do with a Binding instance is create a *model* (t
 >
 >> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the Record method `getId()` to retrieve object IDs, and Model method `getRecordById()` to retrieve record instances by those IDs.
 > - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
->> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if our schema prohibits records without an ID field!
+>> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if your schema prohibits records without an ID field!
 
 Once you have your model ready, you can bind events to it and begin creating instances:
 
@@ -182,7 +182,7 @@ My APIs, Let Me Show You Them
 >>> - `getInstanceCount(includeNew = false)`
 >>>   Retrieve the number of active Records of this Model. By default, only saved records (those with IDs) are returned. To return all objects, pass <tt>true</tt>.
 >>> - `getAllInstances(includeNew = false)`
->>>   Get a map of all active records, indexed by ID. If <tt>true</tt> is passed, unsaved records will be returned as well under the indexes '<tt>new#0</tt>', '<tt>new#1</tt>' etc 
+>>>   Get a map of all active records, indexed by ID. If <tt>true</tt> is passed, unsaved records will be returned as well under the indexes '<tt>new#0</tt>', '<tt>new#1</tt>' etc
 >>
 >> Event handling (`JSchema.EventHandler`)
 >> ---------------------------------------
@@ -221,6 +221,31 @@ My APIs, Let Me Show You Them
 >>	 Allows client code to flag to this record that clientside changes to it have been dealt with in some way (propagated to server etc). This method queries whether the record needs saving.
 >> - `changesPropagated()`<br />
 >>	 Flag that changes have been dealt with and reset the status of `isDirty()`.
+
+TODO
+----
+- **Bugfixes**
+	- check events fired by other change actions (unset, clear & push)
+	- fire all events upon calling clear() instead of just top level ones
+	- check all callback contexts
+	- **Change querying**
+		- ensure changes while marshalling are detected as a single edit
+		- check returns of hasChanged(), getPrevious() et al
+- **New methods**
+	- add method aliases for class-wide addEvent + retroactive setting so as to not have to use `prototype`
+	- add pop() helper for removing array elements
+- **Improve error callback**
+	- do specific errors, pass old & attempted values
+- **Undo module**
+	- add undo history
+	- add methods for tagging record state & reverting to that time
+- **Improve event marshalling**
+	- marshall stacking (count calls...)
+- **Low priority**
+	- do mootools branch
+	- refactor _isEqual to global scope
+	- refactor duplicate Binding/EventHandler code for reuse
+	- remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 
 License
 -------
