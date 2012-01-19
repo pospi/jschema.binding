@@ -68,7 +68,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			"record_id":{
 				"type":"number",
 				"description":"Product identifier",
-				"required":true
+				"required":false
 			},
 			"name":{
 				"description":"Name of the product",
@@ -145,12 +145,15 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    // (note that this must be done prior to creating records for them to inherit these base events)
 
 	   	// do something when any record changes
-	    TestModel.prototype.addEvent('change', function(record, old) { change('change', record, old); });
+	    TestModel.addEvent('error', errored);
+	    TestModel.addEvent('change', function(record, old) { change('change', record, old); });
 	    // do something when any property is created
-	    TestModel.prototype.addEvent('change.create', function(record, old) { change('change.create', record, old); });
+	    TestModel.addEvent('change.create', function(record, old) { change('change.create', record, old); });
+	    TestModel.addEvent('change.update', function(record, old) { change('change.update', record, old); });
+	    TestModel.addEvent('change.delete', function(record, old) { change('change.delete', record, old); });
 	    // do something when the 'name' property of the record record changes
-		TestModel.prototype.addEvent('change.update.name', function (record, oldval, newval, attr, eventName) {
-			propChange("change.update.name", record, oldval, newval, attr, eventName);
+		TestModel.addEvent('change.?.name', function (record, oldval, newval, attr, eventName) {
+			propChange("change.?.name", record, oldval, newval, attr, eventName);
 		});
 
 	    // ...or we can create a new data record...
@@ -200,8 +203,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			},	// do something when an item is removed from an array
 			"change.*.price" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.*.price", record, oldval, newval, attr, eventName);
-			},				// do something when any "price" value in any object changes
-			"error" : errored				// do something when bad data is passed to the record. If no callbacks are set, an exception will be thrown.
+			}	// do something when any "price" value in any object changes
 		});
 
 		outputHeader("Setting name");
