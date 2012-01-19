@@ -795,6 +795,15 @@
 		ctor.getRecordById = ctor.prototype.getRecordById;
 		ctor.getInstanceCount = ctor.prototype.getInstanceCount;
 		ctor.getAllInstances = ctor.prototype.getAllInstances;
+		ctor.addEvent = function() {
+			this.prototype.addEvent.apply(this.prototype, arguments);
+		};
+		ctor.addEvents = function() {
+			this.prototype.addEvents.apply(this.prototype, arguments);
+		};
+		ctor.removeEvent = function() {
+			this.prototype.removeEvent.apply(this.prototype, arguments);
+		};
 
 		return ctor;
 	};
