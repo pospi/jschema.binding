@@ -142,7 +142,7 @@
 			if (attr) {
 				return JSchema.dotSearchObject(this._previousAttributes, attr) != JSchema.dotSearchObject(this.attributes, attr);
 			}
-			return this._isEqual(this.attributes, this.getPreviousAttributes());
+			return JSchema.isEqual(this.attributes, this.getPreviousAttributes());
 		},
 
 		isDirty : function()
@@ -191,7 +191,7 @@
 				  		changed || (changed = {});
 				  		changed[attr] = changes;
 				  	}
-				} else if (!this._isEqual(old[attr], now[attr])) {
+				} else if (!JSchema.isEqual(old[attr], now[attr])) {
 					changed || (changed = {});
 					changed[attr] = includePrevValue ? [old[attr], now[attr]] : now[attr];
 				}
@@ -253,7 +253,7 @@
 						changes = true;
 						this._dirty = true;
 					}
-				} else if (!this._isEqual(now[attr], val)) {						// scalar property setting
+				} else if (!JSchema.isEqual(now[attr], val)) {						// scalar property setting
 					var oldVal = now[attr];
 					now[attr] = val;
 					changes = true;
@@ -750,49 +750,6 @@
 			}
 
 			return [oldObject, childrenChanged];
-		},
-
-		// mostly taken from Underscore.js isEqual()
-		_isEqual : function(a, b)
-		{
-			// Check object identity.
-			if (a === b) return true;
-			// Different types?
-			var atype = typeof(a), btype = typeof(b);
-			if (atype != btype) return false;
-			// Basic equality test (watch out for coercions).
-			if (a == b) return true;
-			// One is falsy and the other truthy.
-			if ((!a && b) || (a && !b)) return false;
-			// Check dates' integer values.
-			if (atype == 'date' && bType == 'date') {
-				return a.getTime() === b.getTime();
-			}
-			// Compare regular expressions.
-			if (atype == 'regexp' && bType == 'regexp') {
-				return a.source === b.source &&
-						a.global     === b.global &&
-						a.ignoreCase === b.ignoreCase &&
-						a.multiline  === b.multiline;
-			}
-			// If a is not an object by this point, we can't handle it.
-			if (atype !== 'object') return false;
-			// Check for different array lengths before comparing contents.
-			if (a.length && (a.length !== b.length)) return false;
-			// Nothing else worked, deep compare the contents.
-			var aKeys = this._getObjectKeys(a), bKeys = this._getObjectKeys(b);
-			// Different object sizes?
-			if (aKeys.length != bKeys.length) {
-				return false;
-			}
-			// Recursive comparison of contents.
-			for (var i = 0; i < aKeys.length; ++i) {
-				var key = aKeys[i];
-				if (!(key in b) || !this._isEqual(a[key], b[key])) {
-					return false;
-				}
-			}
-			return true;
 		},
 
 		_getObjectKeys : function(obj)

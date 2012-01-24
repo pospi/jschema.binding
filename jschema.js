@@ -146,5 +146,48 @@ var JSchema = {
 			return [prevTarget, key, currentPath.join('.')];
 		}
 		return target;
+	},
+
+	// mostly taken from Underscore.js isEqual()
+	isEqual : function(a, b)
+	{
+		// Check object identity.
+		if (a === b) return true;
+		// Different types?
+		var atype = typeof(a), btype = typeof(b);
+		if (atype != btype) return false;
+		// Basic equality test (watch out for coercions).
+		if (a == b) return true;
+		// One is falsy and the other truthy.
+		if ((!a && b) || (a && !b)) return false;
+		// Check dates' integer values.
+		if (atype == 'date' && bType == 'date') {
+			return a.getTime() === b.getTime();
+		}
+		// Compare regular expressions.
+		if (atype == 'regexp' && bType == 'regexp') {
+			return a.source === b.source &&
+					a.global     === b.global &&
+					a.ignoreCase === b.ignoreCase &&
+					a.multiline  === b.multiline;
+		}
+		// If a is not an object by this point, we can't handle it.
+		if (atype !== 'object') return false;
+		// Check for different array lengths before comparing contents.
+		if (a.length && (a.length !== b.length)) return false;
+		// Nothing else worked, deep compare the contents.
+		var aKeys = this._getObjectKeys(a), bKeys = this._getObjectKeys(b);
+		// Different object sizes?
+		if (aKeys.length != bKeys.length) {
+			return false;
+		}
+		// Recursive comparison of contents.
+		for (var i = 0; i < aKeys.length; ++i) {
+			var key = aKeys[i];
+			if (!(key in b) || !this._isEqual(a[key], b[key])) {
+				return false;
+			}
+		}
+		return true;
 	}
 };
