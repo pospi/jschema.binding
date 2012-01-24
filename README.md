@@ -233,8 +233,6 @@ TODO
 		- ensure changes while marshalling are detected as a single edit
 		- check returns of `hasChanged()`, `getPrevious()` et al
 	- allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
-- **New methods**
-	- add `pop()` helper for removing array elements
 - **Improve error callback**
 	- do specific errors, pass old & attempted values
 - **Undo module**

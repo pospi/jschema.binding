@@ -423,7 +423,7 @@
 		 * Array helper for appending elements to an array property
 		 *
 		 * @throws	an error if target variable is not an array
-		 * @return the new array key added (length - 1)
+		 * @return the new array key added (length - 1) or FALSE if it doesn't exist
 		 */
 		push : function(attr, val, suppressEvent)
 		{
@@ -432,7 +432,7 @@
 
 			// Search temporary object for the property to remove
 			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
-			if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
+			if (typeof searchResult[0] == 'undefined') return false;	// property wasn't set
 
 			var parent = searchResult[0],
 				value = parent[searchResult[1]],
@@ -445,7 +445,7 @@
 			if (!this.validate(tempAttrs)) {
 				// if the new attributes don't pass validation, abort. No need to return
 				// a failure case since an error callback is mandatory.
-				return this;
+				return false;
 			}
 
 			// copy over our current attributes to the previous
@@ -460,6 +460,62 @@
 				// fire creation for the actual array index affected
 				tempPath = path + '.' + (value.length - 1);
 				this._propertyChange(tempPath, false, undefined, val, tempPath);
+
+				// fire updates for all parent properties
+				path = path.split('.');
+				while (path.length) {
+					tempPath = path.join('.');
+					this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
+					path.pop();
+				}
+
+				this.fireHeldEvents();
+			}
+
+			return newLen;
+		},
+
+		/**
+		 * Array helper for removing elements from an array property
+		 *
+		 * @throws	an error if target variable is not an array
+		 * @return the new length of the array after removal or FALSE if the property doesn't exist
+		 */
+		pop : function(attr, suppressEvent)
+		{
+			// Create an object with the previous attribute set to modify and validate with
+			var tempAttrs = this.getAttributes();
+
+			// Search temporary object for the property to remove
+			var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+			if (typeof searchResult[0] == 'undefined') return false;	// property wasn't set
+
+			var parent = searchResult[0],
+				value = parent[searchResult[1]],
+				path = searchResult[2],
+				newLen = value.length - 1,
+				tempPath;
+
+			// pop from the target array, assuming it is one. If not, an error will be thrown.
+			value.pop();
+			if (!this.validate(tempAttrs)) {
+				// if the new attributes don't pass validation, abort. No need to return
+				// a failure case since an error callback is mandatory.
+				return false;
+			}
+
+			// copy over our current attributes to the previous
+			this._previousAttributes = this.getAttributes();
+			this.attributes = tempAttrs;
+			this._dirty = true;
+
+			// fire events for all changes
+			if (!suppressEvent) {
+				this.holdEvents();
+
+				// fire deletion for the actual array index affected
+				tempPath = path + '.' + value.length;
+				this._propertyChange(tempPath, false, this.getPrevious(tempPath), undefined, tempPath);
 
 				// fire updates for all parent properties
 				path = path.split('.');

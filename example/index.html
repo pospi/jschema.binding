@@ -302,6 +302,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	outputHeader('Appending to an array');
 	test3.push('categories', 99);
 
+	outputHeader('Removing from an array');
+	test3.pop('categories');
+
 	outputHeader('Final object:', test3.attributes);
 	outputLine('And value of object_test beforehand:', test3.getPrevious('object_test'));
 	outputLine('Changed attributes were:', test3.getChangedAttributes());
