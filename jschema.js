@@ -55,6 +55,22 @@ var JSchema = {
 	Validator : JSV.createEnvironment('json-schema-draft-03'),
 
 	/**
+	 * Register a schema with the schema validator. Doing so allows other schemas
+	 * referencing this one to find it by its 'id' URI.
+	 * @param  {object} schema schema definition to register
+	 * @param  {string} uri    (optional) if provided, registers the schema under this URI.
+	 *                         When ommitted the uri is retrieved from the schema's ID.
+	 * @return JSONSchema instance from JSV
+	 */
+	registerSchema : function(schema, uri)
+	{
+		if (!uri) {	// attempt loading URI from the schema's ID if not provided
+			uri = schema.id;
+		}
+		return JSchema.Validator.createSchema(schema, undefined, uri);
+	},
+
+	/**
 	 * Recursively extends an object's prototype with the object passed in.
 	 * This acts similarly to (and is heavily based upon) jQuery's extend(),
 	 * except that explicitly set 'undefined' values have the effect of
