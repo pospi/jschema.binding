@@ -222,6 +222,13 @@ JSchema.Binding records recognise the following events:
 >	 Allows client code to flag to this record that clientside changes to it have been dealt with in some way (propagated to server etc). This method queries whether the record needs saving.
 > - `changesPropagated()`<br />
 >	 Flag that changes have been dealt with and reset the status of `isDirty()`.
+>
+> ### Global Methods ###
+>
+> These methods are only present on the global `JSchema` object itself.
+>
+> - `registerSchema(schema, uri)`<br />
+>	Allows registering a schema definition with JSV, in order for other schemas to be able to reference it by its URI. If the uri is ommitted, the `id` field of the schema itself will be used instead.
 
 TODO
 ----
@@ -232,7 +239,7 @@ TODO
 	- **Change querying**
 		- ensure changes while marshalling are detected as a single edit
 		- check returns of `hasChanged()`, `getPrevious()` et al
-	- allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
+	- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
 - **Improve error callback**
 	- do specific errors, pass old & attempted values
 - **Undo module**
@@ -242,7 +249,6 @@ TODO
 	- marshall stacking (count calls...)
 - **Low priority**
 	- do mootools branch
-	- refactor `_isEqual` to global scope
 	- refactor duplicate Binding/EventHandler code for reuse
 	- remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 
