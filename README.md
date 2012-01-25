@@ -229,6 +229,9 @@ JSchema.Binding records recognise the following events:
 >
 > - `registerSchema(schema, uri)`<br />
 >	Allows registering a schema definition with JSV, in order for other schemas to be able to reference it by its URI. If the uri is ommitted, the `id` field of the schema itself will be used instead.
+>
+> - `getSchema(uri)`<br />
+>	Allows retrieving a schema previously registered with `registerSchema()`.
 
 TODO
 ----

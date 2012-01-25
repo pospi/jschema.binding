@@ -71,6 +71,17 @@ var JSchema = {
 	},
 
 	/**
+	 * Retrieve a registered schema by its URI
+	 * @param  {string} uri URI of the schema to load. This will either be the URI
+	 *                      passed to registerSchema(), or the 'id' attribute of the schema.
+	 * @return {object}
+	 */
+	getSchema : function(uri)
+	{
+		return JSchema.Validator.findSchema(uri);
+	},
+
+	/**
 	 * Recursively extends an object's prototype with the object passed in.
 	 * This acts similarly to (and is heavily based upon) jQuery's extend(),
 	 * except that explicitly set 'undefined' values have the effect of
