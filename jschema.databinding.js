@@ -656,7 +656,7 @@
 
 			attrs = JSchema.extendAndUnset(this.getAttributes(), attrs);
 
-			var r = JSchema.Validator.validate(attrs, this.schema);
+			var r = this.schema.validate(attrs);
 			if (r.errors.length) {
 				if (!this.fireEvent('error', this, r.errors)) {
 					// no error callbacks registered
@@ -790,7 +790,15 @@
 	JSchema.Binding.Create = function(schema, options)
 	{
 		if (!schema) {
-			throw "Could not create JSchema.Binding Model - no schema";
+			throw "Could not create JSchema.Binding Model - schema is not a JSONSchema!";
+		}
+		// attempt registering the schema if it is not already a reference to one
+		if (!JSV.isJSONSchema(schema)) {
+			// if it has an id, check whether it's already been registered
+			if (!schema['id'] || !(schema = JSchema.getSchema(schema.id))) {
+				// and if not, register it
+				schema = JSchema.registerSchema(schema);
+			}
 		}
 
 		options = options || {};
