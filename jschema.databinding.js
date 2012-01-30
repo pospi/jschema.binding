@@ -789,6 +789,10 @@
 	// Creates a Binding subclass with the desired validation schema and options
 	JSchema.Binding.Create = function(schema, options)
 	{
+		if (!schema) {
+			throw "Could not create JSchema.Binding Model - no schema";
+		}
+
 		options = options || {};
 		var ctor = function(attrs, instanceOpts) {
 			var newCtor = function(){},
