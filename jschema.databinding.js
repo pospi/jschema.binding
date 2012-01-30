@@ -57,6 +57,7 @@
 		attributes : {},			// our properties
 		_previousAttributes : null,	// A snapshot of the model's previous attributes, taken immediately after the last "change" event was fired.
 		_dirty : false,				// true if object is dirty (needs to be pushed to server)
+		_validating : true,			// true if object should perform validation when updating data
 
 		//=============================================================================================
 		//	Accessors
@@ -649,6 +650,10 @@
 		 */
 		validate : function(attrs)
 		{
+			if (!this._validating) {
+				return true;
+			}
+
 			attrs = JSchema.extendAndUnset(this.getAttributes(), attrs);
 
 			var r = JSchema.Validator.validate(attrs, this.schema);
@@ -662,6 +667,16 @@
 				return false;
 			}
 			return true;
+		},
+
+		pauseValidation : function()
+		{
+			this._validating = false;
+		},
+
+		resumeValidation : function()
+		{
+			this._validating = true;
 		},
 
 		/**
