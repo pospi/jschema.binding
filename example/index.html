@@ -309,6 +309,11 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	outputLine('And value of object_test beforehand:', test3.getPrevious('object_test'));
 	outputLine('Changed attributes were:', test3.getChangedAttributes());
 
+	outputHeader("Doing something bad (skipping validation)");
+	test.pauseValidation();
+	test.set('object_test.key', 10);
+	test.resumeValidation();
+
 	outputHeader("Doing something bad");
 	test.set('object_test.key', 10);
 
