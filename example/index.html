@@ -240,11 +240,15 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		outputHeader("Initialising object_test");
 		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
 
+		outputLine("let's also save the record's state now", test.getAll());
+		test.saveState('some_state');
+
 		outputHeader("Changing object_test.key");
 		test.set({ object_test : {key : 'zomg'} });
 
 		outputHeader("Changing object_test.value and object_test.anotherValue");
 		test.set({ object_test : {value : 'zomgval', anotherValue : 13556} });
+		outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes(true));
 
 		outputHeader("Changing object_test.noBubble with a callback registered to prevent event propagation");
 		test.set({ object_test : {noBubble : 13556} });
@@ -272,6 +276,15 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 		outputHeader("Setting price on obj_test");
 		test.set({ object_test : {price : 10} });
+
+		outputHeader("Change tests:");
+		outputLine('last change on record:', test.getChangedAttributes());
+		outputLine('last change (showing diffs):', test.getChangedAttributes(true));
+		outputLine('all changes since state was saved:', test.getChangedAttributes(false, test.getPreviousAttributes('some_state')));
+		outputLine('record\'s current and old attributes:', test.getAll(), test.getPreviousAttributes('some_state'));
+		outputLine('reverting record...');
+		test.revertToState('some_state');
+		outputLine('record is now:', test.getAll());
 	} catch (e) {
 		if (e.schemaErrors) {
 			outputHeader("uncaught exception", e);
@@ -295,12 +308,14 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	outputHeader('Unsetting a property using a dot-notation index');
 	test3.unset('object_test.value');
+	outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes());
 
 	outputHeader('Setting a property using a dot-notation index');
 	test3.set('object_test.key', 'newone');
 
 	outputHeader('Appending to an array');
 	test3.push('categories', 99);
+	outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes());
 
 	outputHeader('Removing from an array');
 	test3.pop('categories');
