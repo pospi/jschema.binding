@@ -55,7 +55,8 @@
 	JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		attributes : {},			// our properties
-		_previousAttributes : null,	// A snapshot of the model's previous attributes, taken immediately after the last "change" event was fired.
+		_previousAttributes : null,	// A snapshot of the record's previous attributes, taken immediately after the last "change" event was fired.
+		_savedStates : {},			// various snapshots of the record data saved into buckets. This allows for history actions and state saving.
 		_dirty : false,				// true if object is dirty (needs to be pushed to server)
 		_validating : true,			// true if object should perform validation when updating data
 
@@ -132,19 +133,7 @@
 			return JSchema.extendAndUnset({}, this.attributes);
 		},
 
-		//======= Saved / previous state ========
-
-		/**
-		 * Determine if the model has changed since the last "change" event.
-		 * If an attribute name is passed, determine if that attribute has changed.
-		 */
-		hasChanged : function(attr)
-		{
-			if (attr) {
-				return JSchema.dotSearchObject(this._previousAttributes, attr) != JSchema.dotSearchObject(this.attributes, attr);
-			}
-			return JSchema.isEqual(this.attributes, this.getPreviousAttributes());
-		},
+		//======== Replication handling =========
 
 		isDirty : function()
 		{
@@ -160,11 +149,25 @@
 			this._dirty = false;
 		},
 
-		// Get the previous value of an attribute, recorded at the time of the last data change
-		getPrevious : function(attr)
+		//======= Saved / previous state ========
+
+		/**
+		 * Determine if the model has changed since the last "change" event.
+		 * If an attribute name is passed, determine if that attribute has changed.
+		 * If 'since' is passed, the state of the object at the time of that saved
+		 * state will be queried instead - check the whole object with (null, 'someTime').
+		 * If there is no previous state found, NULL is returned instead.
+		 */
+		hasChanged : function(attr, since)
 		{
-			if (!attr || !this._previousAttributes) return null;
-			return JSchema.dotSearchObject(this._previousAttributes, attr);
+			var changeTarget = this.getPreviousAttributes(since);
+			if (!changeTarget) {
+				return null;
+			}
+			if (attr) {
+				return JSchema.dotSearchObject(changeTarget, attr) != JSchema.dotSearchObject(this.attributes, attr);
+			}
+			return JSchema.isEqual(this.attributes, changeTarget);
 		},
 
 		/**
@@ -174,11 +177,11 @@
 		 * the server.
 		 *
 		 * @param	bool	includePrevValue	if true, each element will be returned as an array of [oldValue, newValue]
-		 * @param	object/array	now			if passed, only the attributes specified will be checked for changes
-		 * @param	object/array	old			internal use. old attribute set to check 'now' against.
+		 * @param	object/array	old			if passed, will be used as the set of old attributes to check against. If ommitted, previous attributes are used.
+		 * @param	object/array	now			if passed, only the attributes specified will be checked for changes. If ommitted, current attributes are used.
 		 * @return recursive object of changes if changes have been made, false otherwise
 		 */
-		getChangedAttributes : function(includePrevValue, now, old)
+		getChangedAttributes : function(includePrevValue, old, now)
 		{
 			now || (now = this.attributes);
 			old || (old = this._previousAttributes);
@@ -187,7 +190,7 @@
 			for (var attr in now) {
 				if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(old[attr]))	/* LIBCOMPAT */
 				  || (jQuery.isArray(now[attr]) && jQuery.isArray(old[attr])) ) {			/* LIBCOMPAT */
-				  	changes = this.getChangedAttributes(includePrevValue, now[attr], old[attr]);
+				  	changes = this.getChangedAttributes(includePrevValue, old[attr], now[attr]);
 				  	if (changes) {
 				  		changed || (changed = {});
 				  		changed[attr] = changes;
@@ -200,10 +203,69 @@
 			return changed;
 		},
 
-		// Get all of the attributes of the model at the time it was last modified
-		getPreviousAttributes : function()
+		/**
+		 * Get the previous value of an attribute, recorded at the time of the last data change or a
+		 * particular saved state
+		 * @param  {string} attr  attribute to retrive
+		 * @param  {string} since (optional) saved record state to query
+		 * @return {mixed}
+		 */
+		getPrevious : function(attr, since)
 		{
-			return JSchema.extendAndUnset({}, this._previousAttributes);
+			var changeTarget = this.getPreviousAttributes(since);
+			if (!attr || !changeTarget) return null;
+			return JSchema.dotSearchObject(this._previousAttributes, attr);
+		},
+
+		/**
+		 * Get all of the attributes of the model at the time it was last modified
+		 * or at a particular saved point in time
+		 * @param  {string} stateName (optional) if passed, this saved state will be returned
+		 * @return object of attributes, or NULL if there was no previous state found
+		 */
+		getPreviousAttributes : function(stateName)
+		{
+			if (!stateName && !this._previousAttributes) {
+				return null;
+			}
+			if (stateName && !this._savedStates[stateName]) {
+				return null;
+			}
+			return JSchema.extendAndUnset({}, stateName ? this._savedStates[stateName] : this._previousAttributes);
+		},
+
+		/**
+		 * Save (or update) the current attributes of the record into a temporary
+		 * cache for retrieval, reversion or change checking later.
+		 * @param  {string} key the name the current state of the record will be saved under
+		 */
+		saveState : function(key)
+		{
+			this._savedStates[key] = this.getAttributes();
+		},
+
+		/**
+		 * Erase a record state previously saved with saveState()
+		 * @param  {string} key name of the state to save. This can be used with change checking functions.
+		 */
+		eraseState : function(key)
+		{
+			delete this._savedStates[key];
+		},
+
+		/**
+		 * Reverts a record to one of its previously saved states. Note that this does not
+		 * remove the state or perform any kind of stack operations, all prior saved states
+		 * will persist.
+		 * @param  {string} key name of the saved state to revert to
+		 * @return {bool} true on success
+		 */
+		revertToState : function(key)
+		{
+			if (!this._savedStates[key]) {
+				return false;
+			}
+			this.attributes = JSchema.extendAndUnset({}, this._savedStates[key]);
 		},
 
 		//=============================================================================================
