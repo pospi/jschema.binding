@@ -204,6 +204,8 @@ These methods are available to all individual Record instances.
 	Clear all data from the record. You may wish to override this method to reset the record's data to a clean state if your schema prohibits an empty record.
 * `push(attribute, value, suppressEvent)`<br />
 	Helper for array data. Allows you to append to arrays using dot notation to locate the array in the record. Accepts the attribute index, value to append and the usual flag to suppress events.
+* `pop(attribute, suppressEvent)`<br />
+	Helper for array data. Removes the last element of the specified array attribute.
 * `clone(cloneEvents)`<br />
 	Creates a duplicate of the record. If `true` is passed, the original record's instance events are copied as well. If the record's `idField` and `clearIdOnClone` options are set, this may also clear the new record's id attribute.
 * `validate(newData)`<br />
@@ -228,44 +230,44 @@ These methods are available to all individual Record instances.
 
 #### Change Handling ####
 
-- `getPrevious(attribute)`<br />
-	 Retrieve a particular attribute from before the last change using dot notation, or retrieve the whole previous record.
-- `getChangedAttributes()`<br />
-	 Returns an object showing all changes in the last edit action. If `true` is passed, each value will instead be a 2 element array of the old and new values.
-- `getPreviousAttributes()`<br />
-	 Gets the full record from before the last change.
-- `hasChanged([attribute])`<br />
-	 Check whether the record has changed as a result of an edit. If an attribute is specified, checks this property for changes.
+- `saveState(key)`<br />
+	Records the attributes of the model as they are now into an internal cache by the name `key`. This can then be used with other change handling methods to query the state of the object between two distinct known times.
+- `eraseState(key)`<br />
+	Deletes a state previous saved with `saveState()`.
+- `revertToState(key)`<br />
+	Reverts a record to one of its previously saved states. Note that this does not remove the state or perform any kind of 'undo stack' operation, all prior saved states will persist.
+- `getPrevious(attribute, since)`<br />
+	Retrieve a particular attribute from before the last change using dot notation, or from a particular point in time (previously stored by `saveState()`) if `since` is specified.
+- `getPreviousAttributes(since)`<br />
+	Gets the full record from before the last change, or from a particular point in time if `since` is passed.
+- `hasChanged(attribute, since)`<br />
+	Check whether the record has changed since last edit or a saved state. If an attribute is specified, checks this property for changes. You may pass `(null, 'statename')` to determine whether the entire record has changed since a previous saved state.
+- `getChangedAttributes(includePrev, old, now)`<br />
+	By default, returns an object containing all properties modified in the last edit action. If `includePrev = true`, each value will instead be a 2 element array of the old and new values.<br />
+	 `old` and `now` can be used to check changes between other sets of record attributes - for example, to check changes between the current record and an old state, use `getChangedAttributes(false, myRecord.getPreviousAttributes('oldState'))`.
 - `isDirty()`<br />
-	 Allows client code to flag to this record that clientside changes to it have been dealt with in some way (propagated to server etc). This method queries whether the record needs saving.
+	Allows client code to flag to this record that clientside changes to it have been dealt with in some way (propagated to server etc). This method queries whether the record needs saving.
 - `changesPropagated()`<br />
-	 Flag that changes have been dealt with and reset the status of `isDirty()`.
+	Flag that changes have been dealt with and reset the status of `isDirty()`.
 
 TODO
 ----
 - **Bugfixes**
-	- check events fired by other change actions (`unset`, `clear` & `push`)
-	- fire all events upon calling `clear()` instead of just top level ones
+	- check events fired by other change actions (`set(attr, val)`, `unset`, `clear`, `push` & 'pop`)
 	- check all callback contexts
-	- **Change querying**
-		- ensure changes while marshalling are detected as a single edit
-		- check returns of `hasChanged()`, `getPrevious()` et al
-	- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
-- Retrieve default values from schema when reading
 - **Improve error callback**
 	- do specific errors, pass old & attempted values
-- **Improve speed**
-	- allow data validation to process in a Worker thread for complex validation schemas
-- **Undo module**
-	- add undo history
-	- add methods for tagging record state & reverting to that time
 - **Improve event marshalling**
 	- marshall stacking (count calls...)
-- **Low priority**
-	- do mootools branch
-	- refactor duplicate Binding/EventHandler code for reuse
-	- remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
-	- Allow creating separate environments
+- Archive old attributes when event deferring is enabled
+- Retrieve default values from schema when reading
+- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
+- **Improve speed**
+	- allow data validation to process in a Worker thread for complex validation schemas
+- do mootools branch
+- refactor duplicate Binding/EventHandler code for reuse
+- remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
+- Allow creating separate environments with JSV
 
 License
 -------
