@@ -155,6 +155,9 @@ var JSchema = {
 			currentPath = [],			// current path of the search
 			cannotMatch = false,		// abort early if we can't recurse deep enough
 			key;						// current key we are searching
+
+		target = target || {};
+
 		while (parts.length) {
 			key = parts.shift();
 			if (typeof target[key] == 'undefined'
