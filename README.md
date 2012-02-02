@@ -31,7 +31,7 @@ Features
 		- **Data consistency**<br />
 	  Record state is predictable in all callbacks - firing is deferred until the state of the object has completed updating.
 - **Change handling**<br />
-  Records can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those updated.
+  Records can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those modified. Snapshots of data can be taken at any point in time and compared with one another or checked for changes easily.
 - **ID tracking**<br />
   When configured to do so, record IDs are automatically tracked and record instances can be retrieved from your models via `getRecordById()`.
 
@@ -268,6 +268,10 @@ TODO
 - refactor duplicate Binding/EventHandler code for reuse
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - Allow creating separate environments with JSV
+
+Known Issues
+------------
+You cannot initialise an array by initialising one of its indexes using `.set(attr, val)` - you must first initialise the array, then initialise its child members. Failure to do so will result in arrays being generated as objects and may break schema validation.
 
 License
 -------
