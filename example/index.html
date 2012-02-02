@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>JSchema.Binding event tests</title>
+    <title>JSchema.Binding tests</title>
 
     <!-- jQuery /* LIBCOMPAT (denotes a jQuery-specific build line) */ -->
 	<script type="text/javascript" src="../lib/jquery-1.7.1.min.js"></script>
@@ -100,7 +100,33 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 					"value":{"type":"string"},
 					"anotherValue":{"type":"number"},
 					"noBubble":{"type":"number"},
-					"price":{"type":"number"}
+					"price":{"type":"number"},
+					"subObject":{
+						"type" : "object",
+						"properties" : {
+							"one" : {"type" : "string"},
+							"two" : {"type" : "string"},
+							"threes" : {"type" : "array"}
+						},
+						"additionalProperties" : false
+					},
+					"intKeyedObjects" : {
+						"type" : "object",
+						"patternProperties" : {
+							"^\\d+$" : {
+								"type" : "object",
+								"properties" : {
+									"name" : {"type" : "string"}
+								},
+								"dependencies" : {
+									"object_test" : {
+										"anotherValue" : 33
+									}
+								}
+							}
+						},
+						"additionalProperties" : false
+					}
 				}
 			}
 		},
@@ -312,6 +338,11 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	outputHeader('Setting a property using a dot-notation index');
 	test3.set('object_test.key', 'newone');
+	outputLine('changes:', test3.getChangedAttributes(true));
+
+	outputHeader('Setting a deep property and its parent records using dot-notation index');
+	test3.set('object_test.subObject.one', 'yaaaaay');
+	outputLine('changes:', test3.getChangedAttributes(true));
 
 	outputHeader('Appending to an array');
 	test3.push('categories', 99);
