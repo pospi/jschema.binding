@@ -778,6 +778,7 @@
 				var newEventStr = eventStr + '.' + name;
 
 				// Recurse if we're merging plain objects or arrays
+				copyIsArray = false;
 				if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
 					if ( copyIsArray ) {
 						copyIsArray = false;
