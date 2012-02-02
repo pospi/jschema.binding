@@ -146,9 +146,10 @@ var JSchema = {
 	 * @param  {object} target (nested) object to retrieve a property from
 	 * @param  {string} attr   dot-notated string property to get (eg. 'myObject.subObject.childValue')
 	 * @param  {bool}	returnParent	if true, return the parent of the matched variable instead of itself
+	 * @param  {bool} 	createSubobjects	if true, this method will create subindexes into the object for the target attribute
 	 * @return {mixed}
 	 */
-	dotSearchObject : function(target, attr, returnParent)
+	dotSearchObject : function(target, attr, returnParent, createSubobjects)
 	{
 		var parts = attr.split('.'),	// keys to index, in order
 			prevTarget,					// used to return match's parent node
@@ -160,8 +161,14 @@ var JSchema = {
 
 		while (parts.length) {
 			key = parts.shift();
-			if (typeof target[key] == 'undefined'
-			|| !(jQuery.isArray(target) || jQuery.isPlainObject(target))) {	/* LIBCOMPAT */
+			if (typeof target[key] == 'undefined') {
+				if (createSubobjects) {
+					target[key] = {};
+				} else {
+					cannotMatch = true;
+					break;
+				}
+			} else if (!(jQuery.isArray(target) || jQuery.isPlainObject(target))) {	/* LIBCOMPAT */
 				cannotMatch = true;
 				break;
 			}

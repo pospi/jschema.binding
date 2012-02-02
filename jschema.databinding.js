@@ -353,8 +353,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to remove
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
-		if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
+		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true, true);
 
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
