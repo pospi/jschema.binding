@@ -129,12 +129,12 @@ JSchema.Binding records recognise the following events:
 - `change`<br />
 	Fires in response to a change in the record. Receives the current record instance and previous data bundle as parameters.
 - `change.update`<br />
-	Fires in response to an update of the record. Receives the current record instance and previous data bundle as parameters.
+	Fires in response to an update of the record, or an update of a particular value on the record. Receives as parameters the current record instance, previous value, new value, dot-notated index of the property modified and name of the event fired.
 	This callback, as well as `change.create` and `change.delete`, can also be bound to any number of subnamespaces, denoting indexes into the data record and its subproperties.
 - `change.create`<br />
-	Fires in response to a property initialisation within the record, in the same manner as `change.update`.
+	Fires in response to a property initialisation within the record, in the same manner as `change.update`. The previous value will be undefined in this case.
 - `change.delete`<br />
-	Fires in response to a property being deleted within the record, in the same manner as `change.update`.
+	Fires in response to a property being deleted within the record, in the same manner as `change.update`. The new value will be undefined in this case.
 
 ### Methods ###
 
@@ -253,7 +253,7 @@ These methods are available to all individual Record instances.
 TODO
 ----
 - **Bugfixes**
-	- check events fired by other change actions (`set(attr, val)`, `unset`, `clear`, `push` & 'pop`)
+	- trailing star wildcards seem to skip bottom-level events when bubbling property changes
 	- check all callback contexts
 - **Improve error callback**
 	- do specific errors, pass old & attempted values
@@ -263,9 +263,9 @@ TODO
 - Retrieve default values from schema when reading
 - cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
 - **Improve speed**
-	- allow data validation to process in a Worker thread for complex validation schemas
+	- potentially allow data validation to process in a Worker thread for complex validation schemas
 - do mootools branch
-- refactor duplicate Binding/EventHandler code for reuse
+- refactor some duplicate EventHandler code for reuse
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - Allow creating separate environments with JSV
 

@@ -209,6 +209,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 				propChange("change.?.object_test.noBubble", record, oldval, newval, attr, eventName);
 				return false;
 			},	// this callback prevents parent events from firing when this property changes
+			"change.?.object_test.subObject" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.subObject", record, oldval, newval, attr, eventName);
+			},
+			"change.?.object_test.subObject.one" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.subObject.one", record, oldval, newval, attr, eventName);
+			},
 			"change.update.tags" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.update.tags", record, oldval, newval, attr, eventName);
 			},			// do something when this array changes
@@ -323,7 +329,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	outputHeader('.....');
 	outputHeader('Further methods...');
-	var test3 = test.clone();
+	var test3 = test.clone(true);
 	outputLine('New object:', test3.attributes);
 	test3.set({ object_test: { value: 'oh noooooes'}});
 
