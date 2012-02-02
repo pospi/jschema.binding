@@ -661,6 +661,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				oldValue,
 				attemptedValue;
 
+			this.holdEvents();
+
 			for (var i = 0; i < r.errors.length; ++i) {
 				error = r.errors[i];
 				attr = error.uri.substr(error.uri.indexOf('#') + 2);
@@ -687,11 +689,6 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 				// :TODO: make error messages a bit friendlier
 				switch (constraintType) {
-					// simple constraints
-					default:
-						oldValue = this.get(dotattr);
-						attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
-						break;
 					case "dependencies":
 						// :TODO:
 						break;
@@ -737,6 +734,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 							attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
 						attemptedValue = attemptedValue.slice(numPermissable);
 						break;
+					// simple constraints (those which are defined directly under the property to which they correspond)
+					default:
+						oldValue = this.get(dotattr);
+						attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
+						break;
 				}
 
 				r.errors[i]['recordProperty'] = dotattr;
@@ -746,8 +748,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				if (typeof attemptedValue != 'undefined') {
 					r.errors[i]['invalid'] = attemptedValue;
 				}
-			}
 
+				this.fireEvent('error.' + dotattr, this, attemptedValue, dotattr, r.errors[i]);
+			}
 
 			if (!this.fireEvent('error', this, r.errors)) {
 				// no error callbacks registered
@@ -755,6 +758,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				e.schemaErrors = r.errors;
 				throw e;
 			}
+
+			this.fireHeldEvents();
+
 			return false;
 		}
 		return true;
