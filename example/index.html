@@ -205,13 +205,17 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    function change(boundTo, record, prevValues) {
 		    outputLine('( ' + boundTo + ' )', prevValues, '->', record.getAttributes());
 		}
+		// a particular property of the object changes
+	    function propChange(boundTo, record, oldval, newval, attr, eventName) {
+		    outputLine('( ', eventName, ' >> ', boundTo, ' ): ', attr, ' changed:', oldval, '->', newval);
+		}
 		// object modification was rejected as it did not pass validation
 	    function errored(record, errs) {
 		    outputLine('( error )', errs);
 		}
-		// a particular property of the object changes
-	    function propChange(boundTo, record, oldval, newval, attr, eventName) {
-		    outputLine('( ', eventName, ' >> ', boundTo, ' ): ', attr, ' changed:', oldval, '->', newval);
+		// object modification was rejected as it did not pass validation
+	    function propError(record, badData, attribute, errorDetails, existingValue) {
+		    outputLine('( error.' + attribute + ' )', 'invalid data: ', badData, 'details: ', errorDetails);
 		}
 	    //-------------------------------------------------------------
 
@@ -222,6 +226,12 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	   	// do something when any record changes
 	    TestModel.addEvent('error', errored);
+	    TestModel.addEvent('error.object_test.somethingRandom.somehex', function(record, badData, attribute, errorDetails, existingValue) {
+	    	propError(record, badData, attribute, errorDetails, existingValue);
+	    });
+	    TestModel.addEvent('error.object_test.intKeyedObjects', function() {
+	    	propError(record, badData, attribute, errorDetails, existingValue);
+	    });
 	    TestModel.addEvent('change', function(record, old) { change('change', record, old); });
 	    // do something when any property is created
 	    TestModel.addEvent('change.create', function(record, old) { change('change.create', record, old); });
