@@ -322,7 +322,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				changes = true;
 				this._dirty = true;
 				if (!suppressEvent) {
-					this._propertyChange(attr, isCreating, oldVal, val, attr);
+					this._propertyChange(attr, isCreating ? undefined : oldVal, val);
 				}
 			}
 		}
@@ -331,7 +331,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			// fire a general update event
 			this.fireEvent((isCreating ? 'change.create' : 'change.update'), this, this.getPreviousAttributes());
 			// Fire the "change" event if the model has been changed
-			this.change();
+			this.fireEvent('change', this, this.getPreviousAttributes());
+
 			this.fireHeldEvents();
 		} else {
 			this.abortHeldEvents();
@@ -352,13 +353,12 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		// Create an object with the previous attribute set to modify and validate with
 		var tempAttrs = this.getAttributes();
 
-		// Search temporary object for the property to remove
+		// Search temporary object for the property to set and create subrecords if necessary
 		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true, true);
 
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
-			path = searchResult[2],
-			tempPath;
+			path = searchResult[2];
 
 		// set the property and check the new attributes for errors
 		parent[searchResult[1]] = newVal;
@@ -371,25 +371,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		// copy over our current attributes to the previous
 		this._previousAttributes = this.getAttributes();
 		this.attributes = tempAttrs;
+		this._dirty = true;
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this.holdEvents();
-
-			// fire update for the actual property affected
-			path = path.split('.');
-			tempPath = path.join('.');
-			this._propertyChange(tempPath, false, this.getPrevious(tempPath), newVal, tempPath);
-			path.pop();
-
-			// fire updates for all parent properties
-			while (path.length) {
-				tempPath = path.join('.');
-				this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
-				path.pop();
-			}
-
-			this.fireHeldEvents();
+			this._bubblePropertyChange(attr, this.getPrevious(attr), newVal);
 		}
 
 		return this;
@@ -407,8 +393,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
-			path = searchResult[2],
-			tempPath;
+			path = searchResult[2];
 
 		// remove the property from the original temp object by reference
 		delete parent[searchResult[1]];
@@ -425,22 +410,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this.holdEvents();
-
-			// fire deletion for the actual property affected
-			path = path.split('.');
-			tempPath = path.join('.');
-			this._propertyChange(tempPath, false, value, undefined, tempPath);
-			path.pop();
-
-			// fire updates for all parent properties
-			while (path.length) {
-				tempPath = path.join('.');
-				this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
-				path.pop();
-			}
-
-			this.fireHeldEvents();
+			this._bubblePropertyChange(attr, value, undefined);
 		}
 
 		return this;
@@ -468,6 +438,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// run change events
 		if (!suppressEvent) {
+			// :TODO:
 			this.holdEvents();
 
 			for (attr in old) {
@@ -499,8 +470,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
 			path = searchResult[2],
-			newLen = value.length,
-			tempPath;
+			newLen = value.length;
 
 		// append to the target array, assuming it is one. If not, an error will be thrown.
 		value.push(val);
@@ -517,21 +487,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this.holdEvents();
-
-			// fire creation for the actual array index affected
-			tempPath = path + '.' + (value.length - 1);
-			this._propertyChange(tempPath, false, undefined, val, tempPath);
-
-			// fire updates for all parent properties
-			path = path.split('.');
-			while (path.length) {
-				tempPath = path.join('.');
-				this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
-				path.pop();
-			}
-
-			this.fireHeldEvents();
+			this._bubblePropertyChange(attr, undefined, val);
 		}
 
 		return newLen;
@@ -555,8 +511,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
 			path = searchResult[2],
-			newLen = value.length - 1,
-			tempPath;
+			newLen = value.length - 1;
 
 		// pop from the target array, assuming it is one. If not, an error will be thrown.
 		value.pop();
@@ -573,21 +528,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this.holdEvents();
-
-			// fire deletion for the actual array index affected
-			tempPath = path + '.' + value.length;
-			this._propertyChange(tempPath, false, this.getPrevious(tempPath), undefined, tempPath);
-
-			// fire updates for all parent properties
-			path = path.split('.');
-			while (path.length) {
-				tempPath = path.join('.');
-				this._propertyChange(tempPath, false, this.getPrevious(tempPath), this.get(tempPath), tempPath);
-				path.pop();
-			}
-
-			this.fireHeldEvents();
+			this._bubblePropertyChange(attr, this.getPrevious(attr), undefined);
 		}
 
 		return newLen;
@@ -635,13 +576,6 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		return obj;
 	},
 
-	// Call this method to manually fire a 'change' event
-	// Calling this will cause all callbacks listening to the record to run
-	change : function(options)
-	{
-		this.fireEvent('change', this, this.getPreviousAttributes());
-	},
-
 	//=============================================================================================
 	//	Internals
 
@@ -650,26 +584,24 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 * of the record in its model's instance array when options.idField is set.
 	 *
 	 * @param  {string} propertyString name of the property changed (dot notation)
-	 * @param  {string} isCreating	if true, record is being created. Used to determine change subevent name.
 	 * @param  {mixed} oldValue		value of the attribute before the change
 	 * @param  {mixed} newValue		new value of the attribute currently in the object
 	 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
 	 */
-	_propertyChange : function(propertyString, isCreating, oldValue, newValue, attrIndex)
+	_propertyChange : function(propertyString, oldValue, newValue)
 	{
 		var changeAction,
-			stopAtLevel = 0;
+			// we shouldn't bubble these events internally, since parent attributes must receive
+			// their own parameters for callbacks bound at their level
+			stopAtLevel = propertyString.split('.').length + 1;
 
-		if (isCreating || oldValue === undefined) {
-			changeAction = 'create';
-			if (!isCreating) {
-				// trailing create & delete events shouldn't bubble - update callback will run instead for higher attributes
-				stopAtLevel = propertyString.split('.').length + 1;
+		if (oldValue === undefined) {
+			if (newValue === undefined) {
+				return;	// nothing existing or deleted
 			}
+			changeAction = 'create';
 		} else if (newValue === undefined) {
 			changeAction = 'delete';
-			// trailing create & delete events shouldn't bubble - update callback will run instead for higher attributes
-			stopAtLevel = propertyString.split('.').length + 1;
 		} else {
 			changeAction = 'update';
 		}
@@ -701,7 +633,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		var eventName = 'change.' + changeAction + '.' + propertyString;
-		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, attrIndex, eventName);
+		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, propertyString, eventName);
 	},
 
 	/**
@@ -796,7 +728,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 				// if children were modified, fire a change event for us too!
 				if (results[1] && !suppressEvent) {
-					this._propertyChange(newEventStr, isCreating, src, oldObject[name], newEventStr);
+					this._propertyChange(newEventStr, isCreating ? undefined : src, oldObject[name]);
 				}
 			} else if (src != copy) {
 				oldObject[ name ] = copy;
@@ -804,7 +736,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 				// fire a change event for the modified property
 				if (!suppressEvent) {
-					this._propertyChange(newEventStr, isCreating, src, copy, newEventStr);
+					this._propertyChange(newEventStr, isCreating ? undefined : src, copy);
 				}
 			}
 		}
@@ -817,7 +749,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			var i = newObject.length;
 			if (!suppressEvent) {
 				while (i < previousObject.length) {
-					this._propertyChange(eventStr + '.' + i, isCreating, previousObject[i], undefined, eventStr + '.' + i);
+					this._propertyChange(eventStr + '.' + i, isCreating ? undefined : previousObject[i], undefined);
 					++i;
 				}
 			}
@@ -826,10 +758,53 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire a change event for ourselves when bubbling back up
 		if (childrenChanged && !suppressEvent) {
-			this._propertyChange(eventStr, isCreating, previousObject, oldObject, eventStr);
+			this._propertyChange(eventStr, isCreating ? undefined : previousObject, oldObject);
 		}
 
 		return [oldObject, childrenChanged];
+	},
+
+	/**
+	 * Bubbles a single property change from its origin all the way back up the object,
+	 * sending correct data to the events bound at each level.
+	 *
+	 * @param  {string} path        dot-notated index of the attribute affected
+	 * @param  {mixed}  oldVal		value the attribute was changed from
+	 * @param  {mixed}  newVal		value the attribute was changed to
+	 * @param  {bool} 	isClearing  (optional) if true, fire a delete event at the top level. this is much more efficient than determining internally.
+	 */
+	_bubblePropertyChange : function(path, oldVal, newVal, isClearing)
+	{
+		var tempPath;
+
+		this.holdEvents();
+
+		// fire bottom-level event
+		this._propertyChange(path, oldVal, newVal);
+
+		// fire updates for all parent properties
+		path = path.split('.');
+		while (path.length) {
+			path.pop();
+			if (!path.length) {
+				break;
+			}
+			tempPath = path.join('.');
+			this._propertyChange(tempPath, this.getPrevious(tempPath), this.get(tempPath));
+		}
+
+		// fire nonspecific change events
+		var prev = this.getPreviousAttributes(),
+			eventName = 'update';
+		if (isClearing) {
+			eventName = 'delete';
+		} else if (!prev) {
+			eventName = 'create';
+		}
+		this.fireEvent('change.' + eventName, this, this.getPreviousAttributes());
+		this.fireEvent('change', this, this.getPreviousAttributes());
+
+		this.fireHeldEvents();
 	}
 
 }, JSchema.EventHandler);
