@@ -114,7 +114,7 @@ My APIs, Let Me Show You Them
 JSchema.Binding records recognise the following events:
 
 - `error`<br />
-	Fires in response to an error updating the data record. Receives the record instance and an error object from JSV as its parameters, augmented with some of Binding's own:
+	Fires in response to an error updating the data record. Receives as parameters the record instance and an array of error objects from JSV, augmented with some of Binding's own:
 
 	```
 	{
@@ -131,6 +131,7 @@ JSchema.Binding records recognise the following events:
 	}
 	```
 
+	Error callbacks can also be bound to specific properties within the object using dot notation. When bound, these callbacks will recieve the record instance, invalid value that broke the record, dot-notated index of the invalid property and the relevant error object from JSV. One callback is fired for each error object passed to the top-level error callback.
 - `change`<br />
 	Fires in response to a change in the record. Receives the current record instance and previous data bundle as parameters.
 - `change.update`<br />
@@ -257,6 +258,7 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
+- `clear()` events
 - ensure all callback contexts are being carried through to execution
 - Add error callback value passing for dependencies
 - **Improve event marshalling**
