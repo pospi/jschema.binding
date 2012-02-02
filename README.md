@@ -114,7 +114,7 @@ My APIs, Let Me Show You Them
 JSchema.Binding records recognise the following events:
 
 - `error`<br />
-	Fires in response to an error updating the data record. Receives the record instance and an error object from JSV as its parameters:
+	Fires in response to an error updating the data record. Receives the record instance and an error object from JSV as its parameters, augmented with some of Binding's own:
 
 	```
 	{
@@ -123,6 +123,11 @@ JSchema.Binding records recognise the following events:
 		    "attribute": "The attribute of the schema instance that failed to validate",
 		    "message": "Error message",
 		    "details": // The value of the schema attribute that failed to validate
+
+		    // JSchema.Binding properties
+		    "recordProperty" : 	// the dot-notated index of the property which failed to validate
+		    "current" :			// the current, (assumedly) valid value of the errored property
+		    "invalid" : 		// the value of the passed property which invalidated the record
 	}
 	```
 
@@ -252,22 +257,20 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
-- **Bugfixes**
-	- trailing star wildcards seem to skip bottom-level events when bubbling property changes
-	- check all callback contexts
-- **Improve error callback**
-	- do specific errors, pass old & attempted values
+- ensure all callback contexts are being carried through to execution
+- Add error callback value passing for dependencies
 - **Improve event marshalling**
 	- marshall stacking (count calls...)
 - Archive old attributes when event deferring is enabled
 - Retrieve default values from schema when reading
-- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
+- fix trailing star wildcards skipping bottom-level events when bubbling property changes
 - **Improve speed**
 	- potentially allow data validation to process in a Worker thread for complex validation schemas
-- do mootools branch
-- refactor some duplicate EventHandler code for reuse
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - Allow creating separate environments with JSV
+- do mootools branch
+- refactor some duplicate EventHandler code for reuse
+- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
 
 Known Issues
 ------------

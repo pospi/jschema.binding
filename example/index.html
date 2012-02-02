@@ -27,6 +27,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	//----------------------------------------------------
 	// debugging output functions
 	var logEl = jQuery('#testoutput div');		/* LIBCOMPAT */
+	var lineClass = '';	// modify debug line classes to highlight headings
 	function outputLine()
 	{
 		if (typeof console != 'undefined' && typeof console.log != 'undefined') {
@@ -47,13 +48,17 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 				}
 			}
 		}
-		logEl.append(jQuery('<div class="clearfix">' 			/* LIBCOMPAT */
+		logEl.append(jQuery('<div class="clearfix' + lineClass + '">' 			/* LIBCOMPAT */
 						+ string
 						+ '</div>'));
+		lineClass = '';
 	}
 	function outputHeader()
 	{
 		arguments[0] = '<b>---- ' + arguments[0] + ' ----</b>';
+		if (arguments.length == 1) {
+			lineClass = ' header';
+		}
 		return outputLine.apply(this, arguments);
 	}
 	//----------------------------------------------------
@@ -110,6 +115,31 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 						},
 						"additionalProperties" : false
 					},
+					"somethingRandom" : {
+						"type" : "object",
+						"properties" : {
+							"noints" : {
+								"disallow" : "integer",
+								"required" : true,
+								"enum" : ["yay", 0.15, true, "wheeee"]
+							},
+							"percentage" : {
+								"minimum" : 0,
+								"maximum" : 100,
+								"exclusiveMinimum" : true,
+								"exclusiveMaximum" : true,
+								"divisibleBy" : 2
+							},
+							"somehex" : {
+								"pattern" : "^[A-Fa-f0-9]{8}$"
+							},
+							"restrictedLen" : {
+								"type" : "string",
+								"minLength" : 8,
+								"maxLength" : 8
+							}
+						}
+					},
 					"intKeyedObjects" : {
 						"type" : "object",
 						"patternProperties" : {
@@ -120,12 +150,32 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 								},
 								"dependencies" : {
 									"object_test" : {
-										"anotherValue" : 33
+										"anotherValue" : {
+											"enum" : [33]
+										}
 									}
 								}
 							}
 						},
 						"additionalProperties" : false
+					},
+					"aNumericArray" : {
+						"type" : "array",
+						"uniqueItems" : true,
+						"minItems" : 3,
+						"maxItems" : 5,
+						"items" : {
+							"type" : "number"
+						},
+						"additionalItems" : false
+					},
+					"stringArray" : {
+						"items" : [
+							{"type" : "string"},
+							{"type" : "string"},
+							{"type" : "string"}
+						],
+						"additionalItems" : false
 					}
 				}
 			}
@@ -363,14 +413,61 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	outputHeader("Doing something bad (skipping validation)");
 	test.pauseValidation();
+	test.saveState('valid');
 	test.set('object_test.key', 10);
 	test.resumeValidation();
+	test.revertToState('valid');
 
 	outputHeader("Doing something bad");
 	test.set('object_test.key', 10);
 
+	outputHeader("More error tests");
+
+	test.set('object_test.somethingRandom', {"allowable" : 11111});
+	test.set('object_test.somethingRandom', {
+		"allowable" : 11111,
+		"noints" : 42
+	});
+	test.set('object_test.somethingRandom', {
+		"allowable" : 11111,
+		"noints" : "nupnup"
+	});
+	test.set('object_test.somethingRandom', {
+		"allowable" : 11111,
+		"noints" : "yay"
+	});
+	test.set('object_test.somethingRandom.percentage', -1);
+	test.set('object_test.somethingRandom.percentage', 0);
+	test.set('object_test.somethingRandom.percentage', 3);
+
+	test.set('object_test.somethingRandom.somehex', 'blargh');
+	test.set('object_test.somethingRandom.restrictedLen', 'FEFE99303443');
+	test.set('object_test.somethingRandom.restrictedLen', '0FF');
+
+	test.set('object_test.intKeyedObjects.ohnoes', {'name' : 'Billy Dengus'});
+
+	test.set('object_test.aNumericArray', [1, 2, 3, 4, 5]);
+	test.set('object_test.aNumericArray.0', 'blah');
+	test.push('object_test.aNumericArray', 8);
+	test.set('object_test.aNumericArray.0', 2);
+
+	test.set('object_test.stringArray', ['wheee', 'eee', 'bleh', 'whoau']);
+
 	/*outputHeader('Clearing...');
 	test3.clear();
+
+
+					"somethingRandom" : {
+						"type" : "object",
+						"properties" : {
+							"noints" : {
+								"disallow" : "integer",
+								"required" : true,
+								"enum" : ["yay", 0.15, true, "wheeee"]
+							}
+						}
+					},
+
 	outputLine(test3);*/
 });
 </script>
@@ -382,6 +479,11 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		background: #EFEFEF;
 		color: #444;
 		font-family: monospace;
+	}
+	.output div.header {
+		margin-left: -30px;
+		font-size: 1.2em;
+		background: #EEE;
 	}
 	.output div div {
 		margin: 0.3em 1.5em;
