@@ -751,7 +751,10 @@
 		 */
 		_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent, isCreating)
 		{
-			var childrenChanged = false;
+			var childrenChanged = false,
+				src,
+				copy,
+				clone;
 
 			// if the existing object was an array, we wil need to check its length after updating
 			var previousIsArray = jQuery.isArray(oldObject);	/* LIBCOMPAT */
@@ -765,7 +768,7 @@
 				JSchema.extendAndUnset(previousObject, oldObject);
 			}
 
-			for ( name in newObject ) {
+			for (var name in newObject) {
 				src = oldObject[ name ];
 				copy = newObject[ name ];
 
