@@ -752,14 +752,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				this.fireEvent('error.' + dotattr, this, attemptedValue, dotattr, r.errors[i]);
 			}
 
-			if (!this.fireEvent('error', this, r.errors)) {
+			this.fireEvent('error', this, r.errors)
+
+			if (!this.fireHeldEvents()) {
 				// no error callbacks registered
 				var e = new Error("Error updating Data Binding - new attributes did not pass validation:\n" + JSON.stringify(r.errors, undefined, "\t"));
 				e.schemaErrors = r.errors;
 				throw e;
 			}
-
-			this.fireHeldEvents();
 
 			return false;
 		}
