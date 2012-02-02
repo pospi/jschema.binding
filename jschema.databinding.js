@@ -651,6 +651,104 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		var r = this.schema.validate(attrs);
 		if (r.errors.length) {
+			// interpret error data from JSV
+			var error,
+				attr, dotattr,
+				fragmentRes,
+				fragmentChar,
+				constraintType,
+				constraintReason,
+				oldValue,
+				attemptedValue;
+
+			for (var i = 0; i < r.errors.length; ++i) {
+				error = r.errors[i];
+				attr = error.uri.substr(error.uri.indexOf('#') + 2);
+
+				// determine fragment identifier in order to retrieve attribute
+				fragmentRes = this.schema.getValueOfProperty('fragmentResolution');
+				if (fragmentRes) {
+					switch (fragmentRes) {
+						case 'slash-delimited':
+							fragmentChar = '\/';
+							break;
+						case 'dot-delimited':
+							fragmentChar = '.';
+							break;
+					}
+				} else {
+					fragmentChar = this.schema.getEnvironment().getDefaultFragmentDelimiter();
+					if (fragmentChar == '/') fragmentChar = '\/';	// escape for regex
+				}
+
+				dotattr = attr.replace(new RegExp(fragmentChar, 'g'), '.');
+				constraintType = error.attribute;
+				constraintReason = error.details;
+
+				// :TODO: make error messages a bit friendlier
+				switch (constraintType) {
+					// simple constraints
+					default:
+						oldValue = this.get(dotattr);
+						attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
+						break;
+					case "dependencies":
+						// :TODO:
+						break;
+					// :NOTE: 'additionaProperties' is the validation error thrown when no matching
+					//			properties or patternProperties are found for some data
+					case "additionalProperties":
+						var j, k, regex, failedSchema = this.schema.getEnvironment().findSchema(error.schemaUri);
+						oldValue = this.get(dotattr);
+						attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
+
+						// filter out the valid properties from the returned set
+						var permissable = failedSchema.getAttribute('properties');
+						if (permissable) {
+							for (j in permissable) {
+								if (permissable.hasOwnProperty(j)) {
+									delete attemptedValue[j];
+								}
+							}
+						}
+
+						// do the same for regex properties
+						permissable = failedSchema.getAttribute('patternProperties');
+						if (permissable) {
+							for (j in permissable) {
+								if (permissable.hasOwnProperty(j)) {
+									regex = new RegExp(permissable[j]);
+									for (k in attemptedValue) {
+										if (!k.match(regex)) {
+											delete attemptedValue[k];
+											break;
+										}
+									}
+								}
+							}
+						}
+						break;
+					// :NOTE: 'items' validation is taken care of in subschemas. 'additionalItems'
+					//		  is thrown when 'items' is an array and there are too many elements.
+					case "additionalItems":
+						var failedSchema = this.schema.getEnvironment().findSchema(error.schemaUri),
+							numPermissable = failedSchema.getAttribute('items').length,
+							oldValue = this.get(dotattr),
+							attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
+						attemptedValue = attemptedValue.slice(numPermissable);
+						break;
+				}
+
+				r.errors[i]['recordProperty'] = dotattr;
+				if (typeof oldValue != 'undefined') {
+					r.errors[i]['current'] = oldValue;
+				}
+				if (typeof attemptedValue != 'undefined') {
+					r.errors[i]['invalid'] = attemptedValue;
+				}
+			}
+
+
 			if (!this.fireEvent('error', this, r.errors)) {
 				// no error callbacks registered
 				var e = new Error("Error updating Data Binding - new attributes did not pass validation:\n" + JSON.stringify(r.errors, undefined, "\t"));
