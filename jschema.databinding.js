@@ -787,7 +787,7 @@
 						clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 					}
 
-					var results = JSchema._handleObjectChange(newEventStr, clone, copy, suppressEvent);
+					var results = this._handleObjectChange(newEventStr, clone, copy, suppressEvent, isCreating);
 
 					oldObject[ name ] = results[0];
 					childrenChanged = true;			// tell our parent to fire modified, too
