@@ -696,14 +696,18 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 					//			properties or patternProperties are found for some data
 					case "additionalProperties":
 						var j, k, regex, failedSchema = this.schema.getEnvironment().findSchema(error.schemaUri);
-						oldValue = this.get(dotattr);
+						if (dotattr) {
+							oldValue = this.get(dotattr);
+						} else {
+							oldValue = this.getAttributes();
+						}
 						attemptedValue = JSchema.dotSearchObject(attrs, dotattr);
 
 						// filter out the valid properties from the returned set
 						var permissable = failedSchema.getAttribute('properties');
 						if (permissable) {
 							for (j in permissable) {
-								if (permissable.hasOwnProperty(j)) {
+								if (permissable.hasOwnProperty(j) && attemptedValue && typeof attemptedValue[j] != 'undefined') {
 									delete attemptedValue[j];
 								}
 							}

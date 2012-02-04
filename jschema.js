@@ -158,6 +158,9 @@ var JSchema = {
 			key;						// current key we are searching
 
 		target = target || {};
+		if (!attr) {
+			return target;
+		}
 
 		while (parts.length) {
 			key = parts.shift();
