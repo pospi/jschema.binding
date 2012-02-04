@@ -229,7 +229,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    TestModel.addEvent('error.object_test.somethingRandom.somehex', function(record, badData, attribute, errorDetails, existingValue) {
 	    	propError(record, badData, attribute, errorDetails, existingValue);
 	    });
-	    TestModel.addEvent('error.object_test.intKeyedObjects', function() {
+	    TestModel.addEvent('error.object_test.intKeyedObjects', function(record, badData, attribute, errorDetails, existingValue) {
 	    	propError(record, badData, attribute, errorDetails, existingValue);
 	    });
 	    TestModel.addEvent('change', function(record, old) { change('change', record, old); });
@@ -274,6 +274,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 			},
 			"change.?.object_test.subObject.one" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.?.object_test.subObject.one", record, oldval, newval, attr, eventName);
+			},
+			"change.?.object_test.intKeyedObjects" : function(record, oldval, newval, attr, eventName) {
+				propChange("change.?.object_test.intKeyedObjects", record, oldval, newval, attr, eventName);
 			},
 			"change.update.tags" : function(record, oldval, newval, attr, eventName) {
 				propChange("change.update.tags", record, oldval, newval, attr, eventName);
