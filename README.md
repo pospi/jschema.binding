@@ -258,12 +258,13 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
+- bubble errors properly
+- fire events in `revertToState()`
 - `clear()` events
 - ensure all callback contexts are being carried through to execution
 - Add error callback value passing for dependencies
-- **Improve event marshalling**
-	- marshall stacking (count calls...)
 - Archive old attributes when event deferring is enabled
+	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
 - Retrieve default values from schema when reading
 - fix trailing star wildcards skipping bottom-level events when bubbling property changes
 - **Improve speed**
@@ -276,7 +277,9 @@ TODO
 
 Known Issues
 ------------
-You cannot initialise an array by initialising one of its indexes using `.set(attr, val)` - you must first initialise the array, then initialise its child members. Failure to do so will result in arrays being generated as objects and may break schema validation.
+- You cannot initialise an array by initialising one of its indexes using `.set(attr, val)` - you must first initialise the array, then initialise its child members. Failure to do so will result in arrays being generated as objects and may break schema validation.
+- Holding events masks the return values of `fireEvent()`, `fireHeldEvents()` etc and code will be unable to determine whether callbacks have been fired (these functions always return true while marshalling to keep any errors in your own code from being raised prematurely, if anyone has any ideas on how to handle this I'd be very interested to hear them!)
+- If no error callback is registered (which you should not really do anyway), invalid value setting while holding events with `holdEvents()` will trigger errors internally even if calling `abortHeldEvents()`. It will also prematurely trigger errors multiple times before `fireHeldEvents()` is called due to the same limitation.
 
 License
 -------
