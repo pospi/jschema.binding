@@ -55,7 +55,6 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	function outputHeader()
 	{
-		arguments[0] = '<b>---- ' + arguments[0] + ' ----</b>';
 		if (arguments.length == 1) {
 			lineClass = ' header';
 		}
@@ -149,9 +148,13 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 									"name" : {"type" : "string"}
 								},
 								"dependencies" : {
-									"object_test" : {
-										"anotherValue" : {
-											"enum" : [33]
+									"name" : {
+										"properties" : {
+											"object_test" : {
+												"value" : {
+													"required" : true
+												}
+											}
 										}
 									}
 								}
@@ -431,6 +434,14 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	test.resumeValidation();
 	test.revertToState('valid');
 
+	outputHeader("Pausing events to perform multiple updates");
+	test.holdEvents();
+	test.set('price', 512);
+	test.set('object_test', {value : 77});
+	test.set('name', 'billy dengus');
+	test.fireHeldEvents();
+	outputLine('Yep that\'s right, you can make valid and invalid changes all at once!');
+
 	outputHeader("Doing something bad");
 	test.set('object_test.key', 10);
 
@@ -466,22 +477,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	test.set('object_test.stringArray', ['wheee', 'eee', 'bleh', 'whoau']);
 
-	/*outputHeader('Clearing...');
-	test3.clear();
-
-
-					"somethingRandom" : {
-						"type" : "object",
-						"properties" : {
-							"noints" : {
-								"disallow" : "integer",
-								"required" : true,
-								"enum" : ["yay", 0.15, true, "wheeee"]
-							}
-						}
-					},
-
-	outputLine(test3);*/
+	test.set('object_test.intKeyedObjects.5', {'name' : 'Billy Dengus'});
 });
 </script>
 <style type="text/css">
@@ -497,6 +493,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		margin-left: -30px;
 		font-size: 1.2em;
 		background: #EEE;
+		font-weight: 800;
+		color: #1EA128;
+		padding: 0.1em;
 	}
 	.output div div {
 		margin: 0.3em 1.5em;
