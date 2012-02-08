@@ -72,7 +72,10 @@ JSchema.EventHandler = {
 
 	_callbacks : {},
 	_lastEventCancelled : false,
-	_marshalling : false,
+
+	// increments and decrements based on calls to holdEvents(), fireHeldEvents()
+	// and abortHeldEvents(). events finally trigger when back to 0.
+	_marshalling : 0,
 	_inMarshalling : false,
 	_marshalledEvents : {},
 	_marshallEventStack : {},
@@ -196,7 +199,7 @@ JSchema.EventHandler = {
 	 */
 	holdEvents : function()
 	{
-		this._marshalling = true;
+		this._marshalling++;
 	},
 
 	/**
@@ -205,7 +208,9 @@ JSchema.EventHandler = {
 	 */
 	fireHeldEvents : function()
 	{
-		this._marshalling = false;
+		if ((--this._marshalling) > 0) {
+			return true;	// :TODO: pretend that the events fired, i guess?
+		}
 		this._inMarshalling = true;
 
 		if (!(this._callbacks)) return false;
@@ -259,7 +264,7 @@ JSchema.EventHandler = {
 	abortHeldEvents : function()
 	{
 		this._marshalledEvents = {};
-		this._marshalling = false;
+		this._marshalling = 0;
 	},
 
 	/**
