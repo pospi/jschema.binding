@@ -11,7 +11,7 @@
  *   'change.delete.<PROPERTYNAME>'
  *		Fired due to changes of particular attributes
  *		Recieves the instance, attribute value and attribute name as parameters
- * - 'error'
+ * - 'error.<PROPERTYNAME>'
  *		Fired when the data attempts to be updated but fails validation. Recieves an
  *		array of error description objects and the Binding instance as parameters.
  *		If no error callbacks are set, this gets thrown as a general Error object
@@ -666,7 +666,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				constraintReason,
 				oldValue,
 				attemptedValue,
-				tempPath;
+				tempPath,
+				propertyValues = {},	// map of object properties showing invalid data
+				propertyErrors = {};	// map of object properties to collect errors fired at each level
 
 			this.holdEvents();
 
@@ -761,10 +763,19 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				}
 				error = r.errors[i];
 
-				// fire an error for this property
-				this.fireEvent('error.' + dotattr, this, attemptedValue, dotattr, error);
+				// store the invalid property on the invalid record holding object
+				var searchResult = JSchema.dotSearchObject(propertyValues, dotattr, true, true);
+				if ($.isArray(attemptedValue) || $.isPlainObject(attemptedValue)) {		/* LIBCOMPAT */
+					JSchema.extendAndUnset(searchResult[0][searchResult[1]], attemptedValue);
+				} else {
+					searchResult[0][searchResult[1]] = attemptedValue;
+				}
 
-				// fire errors for all parent properties
+				// flag an error for this property
+				propertyErrors[dotattr] || (propertyErrors[dotattr] = []);
+				propertyErrors[dotattr].push(error);
+
+				// flag errors for all parent properties
 				dotattr = dotattr.split('.');
 				while (dotattr.length) {
 					dotattr.pop();
@@ -772,8 +783,17 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 						break;
 					}
 					tempPath = dotattr.join('.');
-					this.fireEvent('error.' + tempPath, this, JSchema.dotSearchObject(attrs, tempPath), tempPath, error);
+					propertyErrors[tempPath] || (propertyErrors[tempPath] = []);
+					propertyErrors[tempPath].push(error);
 				}
+			}
+
+			// fire all errors
+			for (dotattr in propertyErrors) {
+				if (!propertyErrors.hasOwnProperty(dotattr)) {
+					continue;
+				}
+				this.fireEvent('error.' + dotattr, this, JSchema.dotSearchObject(propertyValues, dotattr), dotattr, propertyErrors[dotattr]);
 			}
 
 			this.fireEvent('error', this, r.errors)
