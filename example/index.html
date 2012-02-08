@@ -224,7 +224,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    outputLine('( error )', errs);
 	}
 	// object modification was rejected as it did not pass validation
-    function propError(record, badData, attribute, errorDetails, existingValue) {
+    function propError(record, badData, attribute, errorDetails) {
 	    outputLine('( error.' + attribute + ' )', 'invalid data: ', badData, 'details: ', errorDetails);
 	}
     //-------------------------------------------------------------
@@ -236,15 +236,12 @@ outputFn(function() {
 
    	// do something when any record changes
     TestModel.addEvent('error', errored);
-    TestModel.addEvent('error.object_test.somethingRandom.somehex', function(record, badData, attribute, errorDetails, existingValue) {
-    	propError(record, badData, attribute, errorDetails, existingValue);
-    });
-    TestModel.addEvent('error.object_test.somethingRandom', function(record, badData, attribute, errorDetails, existingValue) {
-    	propError(record, badData, attribute, errorDetails, existingValue);
-    });
-    TestModel.addEvent('error.object_test.intKeyedObjects', function(record, badData, attribute, errorDetails, existingValue) {
-    	propError(record, badData, attribute, errorDetails, existingValue);
-    });
+    TestModel.addEvent('error.object_test.somethingRandom.somehex', propError);
+    TestModel.addEvent('error.object_test.somethingRandom.noints', propError);
+    TestModel.addEvent('error.object_test.somethingRandom', propError);
+    TestModel.addEvent('error.object_test.key', propError);
+    TestModel.addEvent('error.object_test', propError);
+    TestModel.addEvent('error.object_test.intKeyedObjects', propError);
     TestModel.addEvent('change', function(record, old) { change('change', record, old); });
     // do something when any property is created
     TestModel.addEvent('change.create', function(record, old) { change('change.create', record, old); });
@@ -524,7 +521,7 @@ outputFn(function() {
 	test.set('object_test.somethingRandom.percentage', 3);
 });
 outputFn(function() {
-	test.set('object_test.somethingRandom.somehex', 'blargh');
+	test.set('object_test.somethingRandom', {'somehex' : 'blargh', 'noints' : 12});
 });
 outputFn(function() {
 	test.set('object_test.somethingRandom.restrictedLen', 'FEFE99303443');
