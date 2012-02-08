@@ -258,17 +258,15 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
-- bubble errors properly
+- Archive old attributes when event deferring is enabled
+	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
 - fire events in `revertToState()`
 - `clear()` events
 - ensure all callback contexts are being carried through to execution
+- fire events in correct order internally in databinding to reduce sort time when firing
 - Add error callback value passing for dependencies
-- Archive old attributes when event deferring is enabled
-	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
 - Retrieve default values from schema when reading
 - fix trailing star wildcards skipping bottom-level events when bubbling property changes
-- **Improve speed**
-	- potentially allow data validation to process in a Worker thread for complex validation schemas
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - Allow creating separate environments with JSV
 - do mootools branch
