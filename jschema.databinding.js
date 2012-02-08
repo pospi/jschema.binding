@@ -638,8 +638,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 	/**
 	 * Run schema validation against a set of incoming attributes, returning true
-	 * if all is well. If any errors are found, the error result object of the JSON schema
-	 * validator is sent to any error callbacks registered.
+	 * if all is well. If any errors are found, the record and the error result object
+	 * of the JSON schema validator is sent to any error callbacks registered, along
+	 * with some additional properties to help deal with the error:
+	 * 	- recordProperty	a string in dot notation to access the property within the record
+	 * 	- current			the existing value of the attribute
+	 * 	- invalid			the invalid value which caused the error
+	 * Note that these properties are only set when they exist on the object, otherwise
+	 * they will be left unfilled.
 	 */
 	validate : function(attrs)
 	{
@@ -659,7 +665,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				constraintType,
 				constraintReason,
 				oldValue,
-				attemptedValue;
+				attemptedValue,
+				tempPath;
 
 			this.holdEvents();
 
@@ -752,8 +759,21 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				if (typeof attemptedValue != 'undefined') {
 					r.errors[i]['invalid'] = attemptedValue;
 				}
+				error = r.errors[i];
 
-				this.fireEvent('error.' + dotattr, this, attemptedValue, dotattr, r.errors[i]);
+				// fire an error for this property
+				this.fireEvent('error.' + dotattr, this, attemptedValue, dotattr, error);
+
+				// fire errors for all parent properties
+				dotattr = dotattr.split('.');
+				while (dotattr.length) {
+					dotattr.pop();
+					if (!dotattr.length) {
+						break;
+					}
+					tempPath = dotattr.join('.');
+					this.fireEvent('error.' + tempPath, this, JSchema.dotSearchObject(attrs, tempPath), tempPath, error);
+				}
 			}
 
 			this.fireEvent('error', this, r.errors)
