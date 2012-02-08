@@ -30,9 +30,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	var lineClass = '';	// modify debug line classes to highlight headings
 	function outputLine()
 	{
-		if (typeof console != 'undefined' && typeof console.log != 'undefined') {
+		/*if (typeof console != 'undefined' && typeof console.log != 'undefined') {
 			console.log.apply(console.log, arguments);
-		}
+		}*/
 		var args = Array.prototype.slice.call(arguments, 0, arguments.length);
 		var string = '', a;
 		while (args.length) {
@@ -58,7 +58,16 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		if (arguments.length == 1) {
 			lineClass = ' header';
 		}
-		return outputLine.apply(this, arguments);
+		outputLine.apply(this, arguments);
+	}
+	function outputFn(fn)
+	{
+		lineClass = ' function';
+		outputLine.call(this,
+			fn.toString().replace(/^\s*function\s*\((\w|,|\s)*\)\s*\{\s*/, '')
+						 .replace(/\}\s*$/, '')
+						 .replace(/^\s*/gm, '').trim());
+		fn();
 	}
 	//----------------------------------------------------
 
@@ -199,285 +208,352 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    doCreateEvents : false,
 	});
 
-    // create a record
-	try {
-	    //-------------------------------------------------------------
-	    // Some callbacks to test the object's events
+    //-------------------------------------------------------------
+    // Some callbacks to test the object's events
 
-	    // object is modified
-	    function change(boundTo, record, prevValues) {
-		    outputLine('( ' + boundTo + ' )', prevValues, '->', record.getAttributes());
-		}
-		// a particular property of the object changes
-	    function propChange(boundTo, record, oldval, newval, attr, eventName) {
-		    outputLine('( ', eventName, ' >> ', boundTo, ' ): ', attr, ' changed:', oldval, '->', newval);
-		}
-		// object modification was rejected as it did not pass validation
-	    function errored(record, errs) {
-		    outputLine('( error )', errs);
-		}
-		// object modification was rejected as it did not pass validation
-	    function propError(record, badData, attribute, errorDetails, existingValue) {
-		    outputLine('( error.' + attribute + ' )', 'invalid data: ', badData, 'details: ', errorDetails);
-		}
-	    //-------------------------------------------------------------
-
-	    outputHeader('Binding \'change\' and \'change:name\' for all records...');
-
-	    // We can bind events to every instance of a model...
-	    // (note that this must be done prior to creating records for them to inherit these base events)
-
-	   	// do something when any record changes
-	    TestModel.addEvent('error', errored);
-	    TestModel.addEvent('error.object_test.somethingRandom.somehex', function(record, badData, attribute, errorDetails, existingValue) {
-	    	propError(record, badData, attribute, errorDetails, existingValue);
-	    });
-	    TestModel.addEvent('error.object_test.intKeyedObjects', function(record, badData, attribute, errorDetails, existingValue) {
-	    	propError(record, badData, attribute, errorDetails, existingValue);
-	    });
-	    TestModel.addEvent('change', function(record, old) { change('change', record, old); });
-	    // do something when any property is created
-	    TestModel.addEvent('change.create', function(record, old) { change('change.create', record, old); });
-	    TestModel.addEvent('change.update', function(record, old) { change('change.update', record, old); });
-	    TestModel.addEvent('change.delete', function(record, old) { change('change.delete', record, old); });
-	    // do something when the 'name' property of the record record changes
-		TestModel.addEvent('change.?.name', function (record, oldval, newval, attr, eventName) {
-			propChange("change.?.name", record, oldval, newval, attr, eventName);
-		});
-
-	    // ...or we can create a new data record...
-	    outputHeader('New data object');
-	    test = new TestModel({
-	    	record_id : 0,
-	    	name : "test",
-	    	price : 12
-	    })
-		outputLine('record constructed:', test.getAll());
-
-	    // ...and bind events to that specific instance. Not that you'd probably usually want to.
-		test.addEvents({
-			"change.?.object_test" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test", record, oldval, newval, attr, eventName);
-			},	// do something when this subobject is modified
-			"change.?.object_test.key" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.key", record, oldval, newval, attr, eventName);
-			},	// do something when this property of a subobject is modified
-			"change.?.object_test.value" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.value", record, oldval, newval, attr, eventName);
-			},
-			"change.?.object_test.anotherValue" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.anotherValue", record, oldval, newval, attr, eventName);
-			},
-			"change.?.object_test.noBubble" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.noBubble", record, oldval, newval, attr, eventName);
-				return false;
-			},	// this callback prevents parent events from firing when this property changes
-			"change.?.object_test.subObject" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.subObject", record, oldval, newval, attr, eventName);
-			},
-			"change.?.object_test.subObject.one" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.subObject.one", record, oldval, newval, attr, eventName);
-			},
-			"change.?.object_test.intKeyedObjects" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.object_test.intKeyedObjects", record, oldval, newval, attr, eventName);
-			},
-			"change.update.tags" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.update.tags", record, oldval, newval, attr, eventName);
-			},			// do something when this array changes
-			"change.update.tags.1" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.update.tags.1", record, oldval, newval, attr, eventName);
-			},			// do something when this particular element of an array changes
-			"change.?.categories" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.?.categories", record, oldval, newval, attr, eventName);
-			},
-			"change.update.categories.?" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.update.categories.?", record, oldval, newval, attr, eventName);
-			},	// do something when any element in the array changes
-			"change.create.categories.?" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.create.categories.?", record, oldval, newval, attr, eventName);
-			},	// do something when an array is appended to (for each item appended)
-			"change.delete.categories.?" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.delete.categories.?", record, oldval, newval, attr, eventName);
-			},	// do something when an item is removed from an array
-			"change.*.price" : function(record, oldval, newval, attr, eventName) {
-				propChange("change.*.price", record, oldval, newval, attr, eventName);
-			}	// do something when any "price" value in any object changes
-		});
-
-		outputHeader("Setting name");
-		test.set({ name : 'feeeeeeeeeeeed' });
-
-
-		// See here how the same setter fires less events for this object since it
-		// doesn't have an extra change event bound to it
-		outputHeader("Second data record with an instance change event bound in addition to the model's event");
-		test2 = new TestModel({
-			record_id : 1,
-			name : "test2",
-			price : 12
-		})
-		outputLine('record constructed:', test2.getAll());
-		test2.addEvent('change.update.name', function(record, oldval, newval, attr, eventName) {
-			propChange("change.update.name [instance]", record, oldval, newval, attr, eventName);
-		});				// do something in addition to the model's change event when this record changes
-
-		outputHeader("Setting name on the second record");
-		test2.set({ name : 'feeeeeeeeeeeed' });
-
-
-		outputHeader("Instance events are ignored when cloning...");
-		var test2copy = test2.clone();
-		outputLine('new record:', test2copy.getAll());
-		test2copy.set({ name : 'derp' });
-
-		outputHeader("...but not if run with .clone(true)");
-		var test2copy2 = test2.clone(true);
-		test2copy2.set({ name : 'burp' });
-
-
-		outputHeader("Initialising object_test");
-		test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
-
-		outputLine("let's also save the record's state now", test.getAll());
-		test.saveState('some_state');
-
-		outputHeader("Changing object_test.key");
-		test.set({ object_test : {key : 'zomg'} });
-
-		outputHeader("Changing object_test.value and object_test.anotherValue");
-		test.set({ object_test : {value : 'zomgval', anotherValue : 13556} });
-		outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes(true));
-
-		outputHeader("Changing object_test.noBubble with a callback registered to prevent event propagation");
-		test.set({ object_test : {noBubble : 13556} });
-
-		outputHeader("Unsetting object_test.value");
-		test.set({ object_test : {value : undefined} });
-
-		outputHeader("Initialising tags array");
-		test.set({ tags : [12, 6, 3] });
-
-		outputHeader("Changing tags array");
-		test.set({ tags : [12, 8, 3] });
-
-		outputHeader("Initialising categories array");
-		test.set({ categories : [12, 6, 3] });
-
-		outputHeader("Changing & adding to categories array");
-		test.set({ categories : [10, 9, 3, 12] });
-
-		outputHeader("Subtracting from categories array");
-		test.set({ categories : [10, 9] });
-
-		outputHeader("Setting price");
-		test.set({ price : 100 });
-
-		outputHeader("Setting price on obj_test");
-		test.set({ object_test : {price : 10} });
-
-		outputHeader("Change tests:");
-		outputLine('last change on record:', test.getChangedAttributes());
-		outputLine('last change (showing diffs):', test.getChangedAttributes(true));
-		outputLine('all changes since state was saved:', test.getChangedAttributes(false, test.getPreviousAttributes('some_state')));
-		outputLine('record\'s current and old attributes:', test.getAll(), test.getPreviousAttributes('some_state'));
-		outputLine('reverting record...');
-		test.revertToState('some_state');
-		outputLine('record is now:', test.getAll());
-	} catch (e) {
-		if (e.schemaErrors) {
-			outputHeader("uncaught exception", e);
-			if (typeof e.schemaErrors != 'undefined' && typeof console != 'undefined' && typeof console.dir != 'undefined') console.dir(e.schemaErrors);
-		} else
-		if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log(e);
+    // object is modified
+    function change(boundTo, record, prevValues) {
+	    outputLine('( ' + boundTo + ' )', prevValues, '->', record.getAttributes());
 	}
+	// a particular property of the object changes
+    function propChange(boundTo, record, oldval, newval, attr, eventName) {
+	    outputLine('( ', eventName, ' >> ', boundTo, ' ): ', attr, ' changed:', oldval, '->', newval);
+	}
+	// object modification was rejected as it did not pass validation
+    function errored(record, errs) {
+	    outputLine('( error )', errs);
+	}
+	// object modification was rejected as it did not pass validation
+    function propError(record, badData, attribute, errorDetails, existingValue) {
+	    outputLine('( error.' + attribute + ' )', 'invalid data: ', badData, 'details: ', errorDetails);
+	}
+    //-------------------------------------------------------------
+
+    outputHeader('Binding \'change\' and \'change:name\' for all records...');
+outputFn(function() {
+    // We can bind events to every instance of a model...
+    // (note that this must be done prior to creating records for them to inherit these base events)
+
+   	// do something when any record changes
+    TestModel.addEvent('error', errored);
+    TestModel.addEvent('error.object_test.somethingRandom.somehex', function(record, badData, attribute, errorDetails, existingValue) {
+    	propError(record, badData, attribute, errorDetails, existingValue);
+    });
+    TestModel.addEvent('error.object_test.somethingRandom', function(record, badData, attribute, errorDetails, existingValue) {
+    	propError(record, badData, attribute, errorDetails, existingValue);
+    });
+    TestModel.addEvent('error.object_test.intKeyedObjects', function(record, badData, attribute, errorDetails, existingValue) {
+    	propError(record, badData, attribute, errorDetails, existingValue);
+    });
+    TestModel.addEvent('change', function(record, old) { change('change', record, old); });
+    // do something when any property is created
+    TestModel.addEvent('change.create', function(record, old) { change('change.create', record, old); });
+    TestModel.addEvent('change.update', function(record, old) { change('change.update', record, old); });
+    TestModel.addEvent('change.delete', function(record, old) { change('change.delete', record, old); });
+    // do something when the 'name' property of the record record changes
+	TestModel.addEvent('change.?.name', function (record, oldval, newval, attr, eventName) {
+		propChange("change.?.name", record, oldval, newval, attr, eventName);
+	});
+});
+
+    // ...or we can create a new data record...
+    outputHeader('New data object');
+    test = new TestModel({
+    	record_id : 0,
+    	name : "test",
+    	price : 12
+    })
+	outputLine('record constructed:', test.getAll());
+
+	outputHeader('Adding some more events, but just to this object');
+outputFn(function() {
+    // ...and bind events to that specific instance. Not that you'd probably usually want to.
+	test.addEvents({
+		"change.?.object_test" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test", record, oldval, newval, attr, eventName);
+		},	// do something when this subobject is modified
+		"change.?.object_test.key" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.key", record, oldval, newval, attr, eventName);
+		},	// do something when this property of a subobject is modified
+		"change.?.object_test.value" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.value", record, oldval, newval, attr, eventName);
+		},
+		"change.?.object_test.anotherValue" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.anotherValue", record, oldval, newval, attr, eventName);
+		},
+		"change.?.object_test.noBubble" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.noBubble", record, oldval, newval, attr, eventName);
+			return false;
+		},	// this callback prevents parent events from firing when this property changes
+		"change.?.object_test.subObject" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.subObject", record, oldval, newval, attr, eventName);
+		},
+		"change.?.object_test.subObject.one" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.subObject.one", record, oldval, newval, attr, eventName);
+		},
+		"change.?.object_test.intKeyedObjects" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.object_test.intKeyedObjects", record, oldval, newval, attr, eventName);
+		},
+		"change.update.tags" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.update.tags", record, oldval, newval, attr, eventName);
+		},			// do something when this array changes
+		"change.update.tags.1" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.update.tags.1", record, oldval, newval, attr, eventName);
+		},			// do something when this particular element of an array changes
+		"change.?.categories" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.?.categories", record, oldval, newval, attr, eventName);
+		},
+		"change.update.categories.?" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.update.categories.?", record, oldval, newval, attr, eventName);
+		},	// do something when any element in the array changes
+		"change.create.categories.?" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.create.categories.?", record, oldval, newval, attr, eventName);
+		},	// do something when an array is appended to (for each item appended)
+		"change.delete.categories.?" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.delete.categories.?", record, oldval, newval, attr, eventName);
+		},	// do something when an item is removed from an array
+		"change.*.price" : function(record, oldval, newval, attr, eventName) {
+			propChange("change.*.price", record, oldval, newval, attr, eventName);
+		}	// do something when any "price" value in any object changes
+	});
+});
+	outputHeader("Setting name");
+outputFn(function() {
+	test.set({ name : 'feeeeeeeeeeeed' });
+});
+
+	// See here how the same setter fires less events for this object since it
+	// doesn't have an extra change event bound to it
+	outputHeader("Second data record with an instance change event bound in addition to the model's event");
+	test2 = new TestModel({
+		record_id : 1,
+		name : "test2",
+		price : 12
+	})
+	outputLine('record constructed:', test2.getAll());
+outputFn(function() {
+	test2.addEvent('change.update.name', function(record, oldval, newval, attr, eventName) {
+		propChange("change.update.name [instance]", record, oldval, newval, attr, eventName);
+	});				// do something in addition to the model's change event when this record changes
+});
+	outputHeader("Setting name on the second record");
+outputFn(function() {
+	test2.set({ name : 'feeeeeeeeeeeed' });
+});
+
+	outputHeader("Instance events are ignored when cloning...");
+outputFn(function() {
+	var test2copy = test2.clone();
+	test2copy.set({ name : 'derp' });
+});
+	outputHeader("...but not if run with .clone(true)");
+outputFn(function() {
+	var test2copy2 = test2.clone(true);
+	test2copy2.set({ name : 'burp' });
+});
+
+	outputHeader("Initialising object_test");
+outputFn(function() {
+	test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
+});
+	outputLine("let's also save the record's state now", test.getAll());
+outputFn(function() {
+	test.saveState('some_state');
+});
+	outputHeader("Changing object_test.key");
+outputFn(function() {
+	test.set({ object_test : {key : 'zomg'} });
+});
+	outputHeader("Changing object_test.value and object_test.anotherValue");
+outputFn(function() {
+	test.set({ object_test : {value : 'zomgval', anotherValue : 13556} });
+});
+	outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes(true));
+
+	outputHeader("Changing object_test.noBubble with a callback registered to prevent event propagation");
+outputFn(function() {
+	test.set({ object_test : {noBubble : 13556} });
+});
+	outputHeader("Unsetting object_test.value");
+outputFn(function() {
+	test.set({ object_test : {value : undefined} });
+});
+	outputHeader("Initialising tags array");
+outputFn(function() {
+	test.set({ tags : [12, 6, 3] });
+});
+	outputHeader("Changing tags array");
+outputFn(function() {
+	test.set({ tags : [12, 8, 3] });
+});
+	outputHeader("Initialising categories array");
+outputFn(function() {
+	test.set({ categories : [12, 6, 3] });
+});
+	outputHeader("Changing & adding to categories array");
+outputFn(function() {
+	test.set({ categories : [10, 9, 3, 12] });
+});
+	outputHeader("Subtracting from categories array");
+outputFn(function() {
+	test.set({ categories : [10, 9] });
+});
+	outputHeader("Setting price");
+outputFn(function() {
+	test.set({ price : 100 });
+});
+	outputHeader("Setting price on obj_test");
+outputFn(function() {
+	test.set({ object_test : {price : 10} });
+});
+	outputHeader("Change tests:");
+	outputLine('last change on record:', test.getChangedAttributes());
+	outputLine('last change (showing diffs):', test.getChangedAttributes(true));
+	outputLine('all changes since state was saved:', test.getChangedAttributes(false, test.getPreviousAttributes('some_state')));
+	outputLine('record\'s current and old attributes:', test.getAll(), test.getPreviousAttributes('some_state'));
+	outputLine('reverting record...');
+outputFn(function() {
+	test.revertToState('some_state');
+});
+	outputLine('record is now:', test.getAll());
+
 	outputHeader('Final object is:');
 	outputLine(test.attributes);
 
 	outputHeader('.....');
 	outputHeader('Further methods...');
-	var test3 = test.clone(true);
+	var test3;
+outputFn(function() {
+	test3 = test.clone(true);
+});
 	outputLine('New object:', test3.attributes);
+outputFn(function() {
 	test3.set({ object_test: { value: 'oh noooooes'}});
-
+});
 	outputHeader("Getter tests");
 	outputLine('name =', test.get('name'));
 	outputLine('object_test =', test.get('object_test'));
 	outputLine('object_test.key =', test.get('object_test.key'));
 
 	outputHeader('Unsetting a property using a dot-notation index');
+outputFn(function() {
 	test3.unset('object_test.value');
+});
 	outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes());
 
 	outputHeader('Setting a property using a dot-notation index');
+outputFn(function() {
 	test3.set('object_test.key', 'newone');
+});
 	outputLine('changes:', test3.getChangedAttributes(true));
 
 	outputHeader('Setting a deep property and its parent records using dot-notation index');
+outputFn(function() {
 	test3.set('object_test.subObject.one', 'yaaaaay');
+});
 	outputLine('changes:', test3.getChangedAttributes(true));
 
 	outputHeader('Appending to an array');
+outputFn(function() {
 	test3.push('categories', 99);
+});
 	outputLine('previous & changed properties:', test.getPreviousAttributes(), test.getChangedAttributes());
 
 	outputHeader('Removing from an array');
+outputFn(function() {
 	test3.pop('categories');
-
+});
 	outputHeader('Final object:', test3.attributes);
 	outputLine('And value of object_test beforehand:', test3.getPrevious('object_test'));
 	outputLine('Changed attributes were:', test3.getChangedAttributes());
 
 	outputHeader("Doing something bad (skipping validation)");
+outputFn(function() {
 	test.pauseValidation();
 	test.saveState('valid');
 	test.set('object_test.key', 10);
-	test.resumeValidation();
 	test.revertToState('valid');
-
+});
+outputFn(function() {
+	test.resumeValidation();
+});
 	outputHeader("Pausing events to perform multiple updates");
+outputFn(function() {
 	test.holdEvents();
 	test.set('price', 512);
 	test.set('object_test', {value : 77});
 	test.set('name', 'billy dengus');
 	test.fireHeldEvents();
+});
 	outputLine('Yep that\'s right, you can make valid and invalid changes all at once!');
 
 	outputHeader("Doing something bad");
+outputFn(function() {
 	test.set('object_test.key', 10);
-
+});
 	outputHeader("More error tests");
 
+outputFn(function() {
 	test.set('object_test.somethingRandom', {"allowable" : 11111});
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom', {
 		"allowable" : 11111,
 		"noints" : 42
 	});
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom', {
 		"allowable" : 11111,
 		"noints" : "nupnup"
 	});
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom', {
 		"allowable" : 11111,
 		"noints" : "yay"
 	});
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.percentage', -1);
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.percentage', 0);
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.percentage', 3);
-
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.somehex', 'blargh');
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.restrictedLen', 'FEFE99303443');
+});
+outputFn(function() {
 	test.set('object_test.somethingRandom.restrictedLen', '0FF');
-
+});
+outputFn(function() {
 	test.set('object_test.intKeyedObjects.ohnoes', {'name' : 'Billy Dengus'});
-
+});
+outputFn(function() {
 	test.set('object_test.aNumericArray', [1, 2, 3, 4, 5]);
+});
+outputFn(function() {
 	test.set('object_test.aNumericArray.0', 'blah');
+});
+outputFn(function() {
 	test.push('object_test.aNumericArray', 8);
+});
+outputFn(function() {
 	test.set('object_test.aNumericArray.0', 2);
-
+});
+outputFn(function() {
 	test.set('object_test.stringArray', ['wheee', 'eee', 'bleh', 'whoau']);
-
+});
+outputFn(function() {
 	test.set('object_test.intKeyedObjects.5', {'name' : 'Billy Dengus'});
+});
+
 });
 </script>
 <style type="text/css">
@@ -496,6 +572,13 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 		font-weight: 800;
 		color: #1EA128;
 		padding: 0.1em;
+	}
+	.output div.function {
+		margin-left: 10px;
+		background: #EEE;
+		color: #DD7700;
+		padding: 0.5em;
+		white-space: pre;
 	}
 	.output div div {
 		margin: 0.3em 1.5em;
