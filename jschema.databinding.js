@@ -764,11 +764,15 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				error = r.errors[i];
 
 				// store the invalid property on the invalid record holding object
-				var searchResult = JSchema.dotSearchObject(propertyValues, dotattr, true, true);
-				if ($.isArray(attemptedValue) || $.isPlainObject(attemptedValue)) {		/* LIBCOMPAT */
-					JSchema.extendAndUnset(searchResult[0][searchResult[1]], attemptedValue);
+				if (dotattr) {
+					var searchResult = JSchema.dotSearchObject(propertyValues, dotattr, true, true);
+					if ($.isArray(attemptedValue) || $.isPlainObject(attemptedValue)) {		/* LIBCOMPAT */
+						JSchema.extendAndUnset(searchResult[0][searchResult[1]], attemptedValue);
+					} else {
+						searchResult[0][searchResult[1]] = attemptedValue;
+					}
 				} else {
-					searchResult[0][searchResult[1]] = attemptedValue;
+					JSchema.extendAndUnset(propertyValues, attemptedValue);
 				}
 
 				// flag an error for this property
