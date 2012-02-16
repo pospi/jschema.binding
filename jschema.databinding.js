@@ -824,6 +824,24 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		this._validating = true;
 	},
 
+	// changes the schema used to validate the record
+	setSchema : function(schema)
+	{
+		if (!schema) {
+			throw "Could not change JSchema.Binding Record schema - not a JSONSchema!";
+		}
+		// attempt registering the schema if it is not already a reference to one
+		if (!JSV.isJSONSchema(schema)) {
+			// if it has an id, check whether it's already been registered
+			if (!schema['id'] || !(schema = JSchema.getSchema(schema.id))) {
+				// and if not, register it
+				schema = JSchema.registerSchema(schema);
+			}
+		}
+
+		this.schema = schema;
+	},
+
 	/**
 	 * Handles merging of record subobjects & firing of appropriate change events
 	 *
