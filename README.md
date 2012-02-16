@@ -214,12 +214,17 @@ These methods are available to all individual Record instances.
 	Helper for array data. Removes the last element of the specified array attribute.
 * `clone(cloneEvents)`<br />
 	Creates a duplicate of the record. If `true` is passed, the original record's instance events are copied as well. If the record's `idField` and `clearIdOnClone` options are set, this may also clear the new record's id attribute.
+
+#### Data Validation ####
+
 * `validate(newData)`<br />
 	Manually perform validation of some data against the record. The supplied data will be merged in to the record's current attributes and checked for validity.
 * `pauseValidation()`<br />
 	Pause all validation when setting data on the object.
 * `resumeValidation()`<br />
 	Resume validation after pausing it to forcibly update the record to an invalid state.
+* `setSchema(schema)`<br />
+	Changes the schema used to validate the object.
 
 #### Data Reading ####
 
