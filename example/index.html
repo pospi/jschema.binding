@@ -22,6 +22,10 @@
 	<script type="text/javascript" src="../jschema.databinding.js"></script>
 
     <script type="text/javascript">
+// some globals so you can inspect these yourself...
+var TestModel, 									// data model. This is your record 'class'.
+	test, test2, test3, test2copy, test2copy2;	// data records. These are your record 'instances'.
+
 jQuery(document).ready(function() {			/* LIBCOMPAT */
 
 	//----------------------------------------------------
@@ -71,11 +75,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	//----------------------------------------------------
 
-    var TestModel,		// data model. This is your object 'class'.
-    	test, test2;	// data records. This is your 'class instance'.
-
 	// create a new model using specified schema validation
 	TestModel = JSchema.Binding.Create({
+		"id" : "http://example.com/TestModel",
 		"name":"Product",
 		"properties":{
 			"record_id":{
@@ -182,6 +184,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 						"additionalItems" : false
 					},
 					"stringArray" : {
+						"id" : "#stringArray",
 						"items" : [
 							{"type" : "string"},
 							{"type" : "string"},
@@ -340,12 +343,12 @@ outputFn(function() {
 
 	outputHeader("Instance events are ignored when cloning...");
 outputFn(function() {
-	var test2copy = test2.clone();
+	test2copy = test2.clone();
 	test2copy.set({ name : 'derp' });
 });
 	outputHeader("...but not if run with .clone(true)");
 outputFn(function() {
-	var test2copy2 = test2.clone(true);
+	test2copy2 = test2.clone(true);
 	test2copy2.set({ name : 'burp' });
 });
 
@@ -419,7 +422,6 @@ outputFn(function() {
 
 	outputHeader('.....');
 	outputHeader('Further methods...');
-	var test3;
 outputFn(function() {
 	test3 = test.clone(true);
 });

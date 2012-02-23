@@ -11,27 +11,34 @@ Binding performs no ajax operations and is not a full MVC framework, but could e
 
 Features
 --------
-- **JSON schema validation**<br />
-  Naturally, all changes to data objects are validated against your schema in real-time and can provide feedback of any changes and errors straight to your UI or other application code.
 - **Powerful event engine**<br />
-  JSchema.Binding's event engine combines namespaced events to allow for fine-grained update callbacks with namespace wildcards to allow even more control. JSchema.EventHandler also provides a robust layer for implementing events on any other javascript objects in your applications.
+  JSchema.Binding's event engine combines namespaced events to allow for fine-grained update callbacks with namespace wildcards to allow even more control. JSchema.EventHandler also provides a robust layer for implementing events on any other non-DOM javascript objects in your applications.
 	- **Event namespacing**<br />
 	  Allows responding to changes in object subproperties with infinite granularity
 		- A modification to the object `addEvent('change', ...);`
 		- A deletion within the object `addEvent('change.delete', ...);`
-		- An update to propertyA `addEvent('change.update.propertyA', ...);`
+		- An update to *propertyA* `addEvent('change.update.propertyA', ...);`
+		- An update to *propertyA* of *objectB* `addEvent('change.update.objectB.propertyA', ...);`
+	- **Event bubbling**<br />
+	  Changes to deeply nested object properties bubble up to their parents with the correct parameters being passed back to bound callbacks. So a change to *objectA.propertyB* would first fire callbacks with the values for *propertyB*, and then again with values for *objectA*. Bubbling can be aborted by returning `false` in callbacks, just like with DOM events. This allows you stop bubbling back up the callback namespace chain early once you have processed everything relevant to a change.
 	- **Callback wildcards**<br />
-	  Allows even finer control, for example:
-		- An update to propertyA `addEvent('change.update.propertyA', ...);`
-		- propertyA being initialised `addEvent('change.create.propertyA', ...);`
-		- Any modification to propertyA `addEvent('change.?.propertyA', ...);`
-		- Modification of any subproperty of object1 `addEvent('change.?.object1.*', ...);`
+	  Allows binding events with even finer control, for example:
+		- An update to *propertyA* `addEvent('change.update.propertyA', ...);`
+		- *propertyA* being initialised `addEvent('change.create.propertyA', ...);`
+		- Any type of modification to *propertyA* `addEvent('change.?.propertyA', ...);`
+		- An update to the record's *propertyA*, or to any *propertyA* within any subobjects of the record `addEvent('change.update.*.propertyA', ...);`
 	- **Event marshalling**<br />
 	  Allows events to be pooled, combined and fired as a single logical 'change'.
-		- **Data consistency**<br />
+	- **Callback data consistency**<br />
 	  Record state is predictable in all callbacks - firing is deferred until the state of the object has completed updating.
+- **JSON schema validation**<br />
+  Naturally, all changes to data objects are validated against your schema in real-time and can provide feedback of any changes and errors straight to your UI or other application code.
+	- **Enhanced errors**<br />
+	  JSV's standard error objects are augmented with attributes for the current value,
+	_ **Error bubbling**<br />
+	  Using the same event mechanism as with change events, errors bubble up to their parent properties. The array of schema error data at each point in the chain contains all errors relevant for that object and all its child properties.
 - **Change handling**<br />
-  Records can be checked for modifications to allow intelligent data pushing, and uploaded propertysets can be refined to only those modified. Snapshots of data can be taken at any point in time and compared with one another or checked for changes easily.
+  Records can be checked for modifications to allow intelligent serverside data pushing, and uploaded propertysets can be refined to only those modified. Snapshots of data can be taken at any point in time and compared with one another or checked for changes easily.
 - **ID tracking**<br />
   When configured to do so, record IDs are automatically tracked and record instances can be retrieved from your models via `getRecordById()`.
 
@@ -41,7 +48,7 @@ JSchema.Binding has minimal coupling to any library and uses jQuery only for uti
 
 **Branches**:
 
-- `git checkout mootools`
+- `git checkout mootools` (:TODO:)
 
 Usage
 -----
@@ -264,8 +271,9 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
-- Retrieve default values from schema when reading
+- Retrieve default values from schema when **reading**
 	- when creating, events should fire from undefined => defaults
+- Allow nesting record instances inside each other
 - Archive old attributes when event deferring is enabled
 	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
 - fire events in `revertToState()`
