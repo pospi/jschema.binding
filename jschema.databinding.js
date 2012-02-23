@@ -577,70 +577,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	},
 
 	//=============================================================================================
-	//	Internals
-
-	/**
-	 * Fire a change event for one of the record's properties changing. Also handles reassignment
-	 * of the record in its model's instance array when options.idField is set.
-	 *
-	 * @param  {string} propertyString name of the property changed (dot notation)
-	 * @param  {mixed} oldValue		value of the attribute before the change
-	 * @param  {mixed} newValue		new value of the attribute currently in the object
-	 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
-	 */
-	_propertyChange : function(propertyString, oldValue, newValue)
-	{
-		var changeAction,
-			// we shouldn't bubble these events internally, since parent attributes must receive
-			// their own parameters for callbacks bound at their level
-			stopAtLevel = propertyString.split('.').length + 1;
-
-		if (oldValue === undefined) {
-			if (newValue === undefined) {
-				return;	// nothing existing or deleted
-			}
-			changeAction = 'create';
-		} else if (newValue === undefined) {
-			changeAction = 'delete';
-		} else {
-			changeAction = 'update';
-		}
-
-		// check for id being set and reassign in instances register
-		if (this.options.idField && propertyString == this.options.idField) {
-			var oldId;
-			if (oldId = this.getPrevious(propertyString)) {
-				// existing record, delete from instances array
-				delete this.Model.instances[oldId];
-			} else {
-				// new record, delete from new instances array
-				for (var i = 0, l = this.Model.newInstances.length; i < l; ++i) {
-					if (this.Model.newInstances[i] === this) {
-						this.Model.newInstances.splice(i, 1);
-						break;
-					}
-				}
-			}
-			if (newValue) {
-				if (this.Model.instances[newValue]) {
-					// :TODO: this could be handled better after implementing undo
-					throw new Error("Cannot reassign record ID: record already exists");
-				}
-				this.Model.instances[newValue] = this;
-			} else {
-				this.Model.newInstances.push(this);
-			}
-		}
-
-		// fire this event
-		var eventName = 'change.' + changeAction + '.' + propertyString;
-		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, propertyString, eventName);
-
-		// check for a primitive value being replaced by an object, fire child create events when necessary
-		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
-			this._fireChildCreateEvents(propertyString, newValue);
-		}
-	},
+	//	Validation
 
 	/**
 	 * Run schema validation against a set of incoming attributes, returning true
@@ -846,6 +783,72 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		this.schema = schema;
+	},
+
+	//=============================================================================================
+	//	Internals
+
+	/**
+	 * Fire a change event for one of the record's properties changing. Also handles reassignment
+	 * of the record in its model's instance array when options.idField is set.
+	 *
+	 * @param  {string} propertyString name of the property changed (dot notation)
+	 * @param  {mixed} oldValue		value of the attribute before the change
+	 * @param  {mixed} newValue		new value of the attribute currently in the object
+	 * @param  {string} attrIndex	the dot-delimited record index of the property being changed
+	 */
+	_propertyChange : function(propertyString, oldValue, newValue)
+	{
+		var changeAction,
+			// we shouldn't bubble these events internally, since parent attributes must receive
+			// their own parameters for callbacks bound at their level
+			stopAtLevel = propertyString.split('.').length + 1;
+
+		if (oldValue === undefined) {
+			if (newValue === undefined) {
+				return;	// nothing existing or deleted
+			}
+			changeAction = 'create';
+		} else if (newValue === undefined) {
+			changeAction = 'delete';
+		} else {
+			changeAction = 'update';
+		}
+
+		// check for id being set and reassign in instances register
+		if (this.options.idField && propertyString == this.options.idField) {
+			var oldId;
+			if (oldId = this.getPrevious(propertyString)) {
+				// existing record, delete from instances array
+				delete this.Model.instances[oldId];
+			} else {
+				// new record, delete from new instances array
+				for (var i = 0, l = this.Model.newInstances.length; i < l; ++i) {
+					if (this.Model.newInstances[i] === this) {
+						this.Model.newInstances.splice(i, 1);
+						break;
+					}
+				}
+			}
+			if (newValue) {
+				if (this.Model.instances[newValue]) {
+					// :TODO: this could be handled better after implementing undo
+					throw new Error("Cannot reassign record ID: record already exists");
+				}
+				this.Model.instances[newValue] = this;
+			} else {
+				this.Model.newInstances.push(this);
+			}
+		}
+
+		// fire this event
+		var eventName = 'change.' + changeAction + '.' + propertyString;
+		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, propertyString, eventName);
+
+		// check for a primitive value being replaced by an object, fire child create events when necessary
+		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
+			this._fireChildCreateEvents(propertyString, newValue);
+		}
 	},
 
 	/**
