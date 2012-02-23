@@ -1049,7 +1049,7 @@ JSchema.Binding.Create = function(schema, options)
 
 		newO = new newCtor();
 		newO.Model = ctor;
-		JSchema.Binding.call(newO, attrs, schema, instanceOpts || options);
+		JSchema.Binding.call(newO, attrs, ctor.schema, instanceOpts || options);
 
 		if (newO.options.idField) {
 			var newId = newO.getId();
@@ -1066,10 +1066,13 @@ JSchema.Binding.Create = function(schema, options)
 	// add methods
 	JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
 
+	// reference the schema onto the Model so we can use it elsewhere
+	ctor.schema = schema;
 	// add static array for storing instances of this record type, and
 	// a static method for retrieving them
 	ctor.instances = {};
 	ctor.newInstances = [];
+	// add Model methods
 	ctor.getRecordById = ctor.prototype.getRecordById;
 	ctor.getInstanceCount = ctor.prototype.getInstanceCount;
 	ctor.getAllInstances = ctor.prototype.getAllInstances;
