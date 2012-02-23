@@ -297,7 +297,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			suppressEvent = param1,
 			changes = false;
 
-		if (!this.validate(attrs)) {
+		if (!this.validate(attrs, true)) {
 			return false;
 		}
 
@@ -362,7 +362,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// set the property and check the new attributes for errors
 		parent[searchResult[1]] = newVal;
-		if (!this.validate(tempAttrs)) {
+		if (!this.validate(tempAttrs, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
 			return this;
@@ -397,7 +397,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// remove the property from the original temp object by reference
 		delete parent[searchResult[1]];
-		if (!this.validate(tempAttrs)) {
+		if (!this.validate(tempAttrs, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
 			return this;
@@ -427,7 +427,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		for (attr in old) {
 			validObj[attr] = undefined;
 		}
-		if (!this.validate(validObj)) {
+		if (!this.validate(validObj, true)) {
 			return false;
 		}
 
@@ -474,7 +474,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// append to the target array, assuming it is one. If not, an error will be thrown.
 		value.push(val);
-		if (!this.validate(tempAttrs)) {
+		if (!this.validate(tempAttrs, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
 			return false;
@@ -515,7 +515,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// pop from the target array, assuming it is one. If not, an error will be thrown.
 		value.pop();
-		if (!this.validate(tempAttrs)) {
+		if (!this.validate(tempAttrs, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
 			return false;
@@ -590,9 +590,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 * Note that these properties are only set when they exist on the object, otherwise
 	 * they will be left unfilled.
 	 */
-	validate : function(attrs)
+	validate : function(attrs, internalCall)
 	{
-		if (!this._validating) {
+		if (internalCall && !this._validating) {
 			return true;
 		}
 
