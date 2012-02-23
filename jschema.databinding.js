@@ -1029,9 +1029,13 @@ JSchema.Binding.Create = function(schema, options)
 	// attempt registering the schema if it is not already a reference to one
 	if (!JSV.isJSONSchema(schema)) {
 		// if it has an id, check whether it's already been registered
-		if (!schema['id'] || !(schema = JSchema.getSchema(schema.id))) {
+		var tempSchema = null;
+		if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
 			// and if not, register it
 			schema = JSchema.registerSchema(schema);
+		}
+		if (tempSchema) {
+			schema = tempSchema;
 		}
 	}
 
