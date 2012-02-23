@@ -37,6 +37,8 @@
  *                     						object. Defaults to false.
  *                     - clearIdOnClone:	if true, records cloned from others can automatically have their
  *                     						ID fields cleared. Defaults to false.
+ *                     - validateCreation:	if true, perform data validation when loading initial record data
+ *                     						according to its schema. Defaults to false.
  */
 JSchema.Binding = function(attrs, schema, options)
 {
@@ -45,6 +47,7 @@ JSchema.Binding = function(attrs, schema, options)
 	// read options
 	this.options = {};
 	this.options.idField		= options.idField || 'id';
+	this.options.validateCreation = options.validateCreation || false;
 	this.options.doCreateEvents	= options.doCreateEvents || false;
 	this.options.clearIdOnClone	= options.clearIdOnClone === false ? false : true;
 
@@ -297,7 +300,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			suppressEvent = param1,
 			changes = false;
 
-		if (!this.validate(attrs, true)) {
+		if ((!isCreating || (isCreating && this.options.validateCreation)) && !this.validate(attrs, true)) {
 			return false;
 		}
 
