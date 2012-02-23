@@ -632,8 +632,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			}
 		}
 
+		// fire this event
 		var eventName = 'change.' + changeAction + '.' + propertyString;
 		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, propertyString, eventName);
+
+		// check for a primitive value being replaced by an object, fire child create events when necessary
+		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
+			this._fireChildCreateEvents(propertyString, newValue);
+		}
 	},
 
 	/**
@@ -975,6 +981,29 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		this.fireEvent('change', this, this.getPreviousAttributes());
 
 		this.fireHeldEvents();
+	},
+
+	/**
+	 * When primitives are replaced by complex properties, we must recurse into
+	 * the new objects and fire create events for all child properties.
+	 */
+	_fireChildCreateEvents : function(attr, obj)
+	{
+		var eventName, propertyString, newVal, i;
+
+		for (i in obj) {
+			if (!obj.hasOwnProperty(i)) {
+				continue;
+			}
+			propertyString = attr + '.' + i;
+			eventName = 'change.create.' + propertyString;
+			newVal = JSchema.dotSearchObject(obj, i);
+			this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, undefined, newVal, propertyString, eventName);
+
+			if (jQuery.isArray(newVal) || jQuery.isPlainObject(newVal)) { /* LIBCOMPAT */
+				this._fireChildCreateEvents(propertyString, newVal);
+			}
+		}
 	}
 
 }, JSchema.EventHandler);
