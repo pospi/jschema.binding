@@ -54,8 +54,9 @@ The first thing you'll want to do with a Binding instance is create a *model* (t
 > A map of options for the new record class.
 >
 >> - `idField` Setting this property enables you to manage your record objects by primary key or other dentifying information, using the Record method `getId()` to retrieve object IDs, and Model method `getRecordById()` to retrieve record instances by those IDs.
-> - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record.
->> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Do not enable this if your schema prohibits records without an ID field!
+> - `doCreateEvents` If true, callbacks bound to any create events will fire when instantiating the record. Defaults to false.
+>> - `clearIdOnClone` If true, records cloned from others will have their IDs reset. Defaults to false. Do not enable this if your schema prohibits records without an ID field!
+>> - `validateCreation` If true, records should be validated when they are initialised for the first time. Defaults to false.
 
 Once you have your model ready, you can bind events to it and begin creating instances:
 
@@ -263,6 +264,8 @@ These methods are available to all individual Record instances.
 
 TODO
 ----
+- Retrieve default values from schema when reading
+	- when creating, events should fire from undefined => defaults
 - Archive old attributes when event deferring is enabled
 	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
 - fire events in `revertToState()`
@@ -270,7 +273,6 @@ TODO
 - ensure all callback contexts are being carried through to execution
 - fire events in correct order internally in databinding to reduce sort time when firing
 - Add error callback value passing for dependencies
-- Retrieve default values from schema when reading
 - fix trailing star wildcards skipping bottom-level events when bubbling property changes
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - Allow creating separate environments with JSV
