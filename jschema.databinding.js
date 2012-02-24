@@ -133,7 +133,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Return a copy of our attributes
 	getAttributes : function()
 	{
-		return JSchema.extendAndUnset({}, this.attributes);
+		return JSchema.extendAndUnset(jQuery.isArray(this.attributes) ? [] : {}, this.attributes);	/* LIBCOMPAT */
 	},
 
 	//======== Replication handling =========
@@ -291,18 +291,24 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			return this;
 		}
 
-		// check for dot notation property setting
+		// check for dot notation property setting method
 		if (typeof attrs == 'string') {
 			return this._setByIndex(attrs, param1, param2);
+		}
+
+		// if not valid, don't do anything
+		if ((!isCreating || (isCreating && this.options.validateCreation)) && !this.validate(attrs, true)) {
+			return false;
+		}
+
+		// if creating and the whole record is an array, our attributes should be too!
+		if (isCreating && jQuery.isArray(attrs)) {	/* LIBCOMPAT */
+			this.attributes = [];
 		}
 
 		var now = this.attributes,
 			suppressEvent = param1,
 			changes = false;
-
-		if ((!isCreating || (isCreating && this.options.validateCreation)) && !this.validate(attrs, true)) {
-			return false;
-		}
 
 		this._previousAttributes = this.getAttributes();
 

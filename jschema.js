@@ -147,26 +147,48 @@ var JSchema = {
 	 * @param  {string} attr   dot-notated string property to get (eg. 'myObject.subObject.childValue')
 	 * @param  {bool}	returnParent	if true, return the parent of the matched variable instead of itself
 	 * @param  {bool} 	createSubobjects	if true, this method will create subindexes into the object for the target attribute
+	 * @param  {JSONSChema} topLevelSchema	when creating subobjects automatically, set this to the top-level schema of the object
+	 *                                     	to read datatypes from it and create parent elements as arrays where appropriate to match
+	 *                                     	the object's structure.
 	 * @return {mixed}
 	 */
-	dotSearchObject : function(target, attr, returnParent, createSubobjects)
+	dotSearchObject : function(target, attr, returnParent, createSubobjects, topLevelSchema)
 	{
 		var parts = attr.split('.'),	// keys to index, in order
 			prevTarget,					// used to return match's parent node
 			currentPath = [],			// current path of the search
 			cannotMatch = false,		// abort early if we can't recurse deep enough
-			key;						// current key we are searching
+			key,						// current key we are searching
+			subAttr, subSchema, fragmentSeparator;
 
 		target = target || {};
 		if (!attr) {
 			return target;
 		}
 
+		// cache fragment separator if creating new objects with schema checks for subindexes
+		if (createSubobjects && topLevelSchema) {
+			fragmentSeparator = JSchema.getFragmentResolutionCharacter(topLevelSchema);
+		}
+
 		while (parts.length) {
 			key = parts.shift();
 			if (typeof target[key] == 'undefined') {
 				if (createSubobjects) {
-					target[key] = {};
+					// if we are able to check against a schema, we can preallocate parent arrays correctly as well
+					if (JSV.isJSONSchema(topLevelSchema)) {
+						subAttr = topLevelSchema.resolveURI('#' + fragmentSeparator + 'properties' + fragmentSeparator
+								+ (currentPath.length ? currentPath.join(fragmentSeparator) + fragmentSeparator : '')
+								+ key);
+						subSchema = JSchema.getSchema(subAttr);
+						if (subSchema && subSchema.getValueOfProperty('type') == 'array') {
+							target[key] = [];
+						} else {
+							target[key] = {};
+						}
+					} else {
+						target[key] = {};
+					}
 				} else {
 					cannotMatch = true;
 					break;
@@ -206,21 +228,7 @@ var JSchema = {
 		// determine fragment replacement character if no model passed for caching,
 		// or model has no cached fragment separator yet.
 		if (model === undefined || !model._fragmentChar) {
-			// determine fragment identifier in order to retrieve attribute
-			var fragmentRes = schema.getValueOfProperty('fragmentResolution');
-			if (fragmentRes) {
-				switch (fragmentRes) {
-					case 'slash-delimited':
-						fragmentChar = '\/';
-						break;
-					case 'dot-delimited':
-						fragmentChar = '.';
-						break;
-				}
-			} else {
-				fragmentChar = schema.getEnvironment().getDefaultFragmentDelimiter();
-				if (fragmentChar == '/') fragmentChar = '\/';	// escape for regex
-			}
+			fragmentChar = JSchema.getFragmentResolutionCharacter(schema);
 		}
 		// if fragment successfully determined & cacheable, cache it
 		if (fragmentChar && model !== undefined) {
@@ -235,6 +243,26 @@ var JSchema = {
 			return attr.replace(new RegExp(fragmentChar, 'g'), '.');
 		}
 		return attr.replace(/\./g, fragmentChar);
+	},
+
+	// interrogate a schema to find its fragment separator character
+	getFragmentResolutionCharacter : function(schema)
+	{
+		if (!JSV.isJSONSchema(schema)) {
+			throw "Could not determine fragment resolution character - not a JSONSchema!";
+		}
+		var fragmentRes = schema.getValueOfProperty('fragmentResolution');
+		if (fragmentRes) {
+			switch (fragmentRes) {
+				case 'slash-delimited':
+					fragmentChar = '/';
+					break;
+				case 'dot-delimited':
+					fragmentChar = '.';
+					break;
+			}
+		}
+		return schema.getEnvironment().getDefaultFragmentDelimiter();
 	},
 
 	// mostly taken from Underscore.js isEqual()
