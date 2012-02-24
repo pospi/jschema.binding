@@ -23,7 +23,7 @@
 
     <script type="text/javascript">
 // some globals so you can inspect these yourself...
-var TestModel, 									// data model. This is your record 'class'.
+var TestModel, TestModel2,						// data models. These are your record 'classes'.
 	test, test2, test3, test2copy, test2copy2;	// data records. These are your record 'instances'.
 
 jQuery(document).ready(function() {			/* LIBCOMPAT */
@@ -75,7 +75,8 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	}
 	//----------------------------------------------------
 
-	// create a new model using specified schema validation
+	outputHeader('Creating a new model using the following schema for validation:');
+outputFn(function() {
 	TestModel = JSchema.Binding.Create({
 		"id" : "http://example.com/TestModel",
 		"name":"Product",
@@ -210,6 +211,7 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	    idField : 'record_id',
 	    doCreateEvents : false,
 	});
+});
 
     //-------------------------------------------------------------
     // Some callbacks to test the object's events
@@ -490,7 +492,15 @@ outputFn(function() {
 outputFn(function() {
 	test.set('object_test.key', 10);
 });
-	outputHeader("More error tests");
+
+outputHeader('Creating an independent subobject using a sub-schema');
+outputFn(function() {
+	TestModel2 = JSchema.Binding.Create(JSchema.getSchema('http://example.com/TestModel#stringArray'));
+	test2 = new TestModel2(['this', 'is', 'an', 'array', 'of', 'strings']);
+});
+	outputLine(test2.getAll());
+
+	outputHeader("Error tests follow..:");
 
 outputFn(function() {
 	test.set('object_test.somethingRandom', {"allowable" : 11111});
