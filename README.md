@@ -269,6 +269,26 @@ These methods are available to all individual Record instances.
 - `changesPropagated()`<br />
 	Flag that changes have been dealt with and reset the status of `isDirty()`.
 
+### Utility Methods ###
+
+These methods are internal to JSchema most of the time, but they're there to use if you wish.
+
+- `JSchema.pathToSchemaUri(attr, backwards, schema, model)`<br />
+	Provides translation between the dot-notation syntax used by JSchema and the internal URI format of any JSONSchema. When `backwards` is true, the translation is from a schema URI to JSchema dot-notated string. `model` is an internal argument and can optionally be provided to cache the schema's fragment identifier character somewhere for subsequent runs.
+
+- `JSchema.extendAndUnset()`<br />
+	Exactly the same as [jQuery's `extend()`](http://api.jquery.com/jQuery.extend/), except that it always expects variable length arguments and allows you to unset existing values in the first object by setting properties to `undefined` in subsequent objects. This method both augments the first object passed and returns it.
+
+- `JSchema.dotSearchObject(target, attr, returnParent, createSubobjects, topLevelSchema)`<br />
+	Manages dot notation handling of object properties. This method is capable of performing various tasks on objects depending on the arguments passed in:
+	- To simply retrieve properties from a javascript object, pass the object in as `target` and the attribute to read as a string. The method returns the property or `undefined` if it doesn't exist.
+	- For editing of objects, pass `returnParent = true`. The method then returns a 3-element array consisting of a reference to the object's parent element (or the original target object if reading a top-level property), index of the target object within the parent and dot-notated string targeting the parent element in the object's hierarchy. These three values can be used together to manipulate objects in any other way - deleting & changing values, popping from arrays or calling any other methods on subobjects with attached logic.
+	- Setting deeply nested data can be automated by setting both `returnParent` and `createSubObjects` to `true`. When activated, rather than returning `undefined` when a value is not found, the function will recurse downward and add objects into the target at all passed indexes. Upon reaching the final index, the newly created parent object and other values are returned as before.<br />
+	If you are setting data within a data record, you may also pass a `topLevelSchema` to the function. This JSONSchema can be used to determine the correct parent datatypes of new values, creating arrays instead of objects as appropriate.
+
+- `JSchema.isEqual(a, b)`<br />
+	Compare any two variables for equality (probably) as efficiently as possible. This method is pretty much taken straight from [underscore.js](http://documentcloud.github.com/underscore/).
+
 TODO
 ----
 - Retrieve default values from schema when **reading**
@@ -290,7 +310,6 @@ TODO
 
 Known Issues
 ------------
-- You cannot initialise an array by initialising one of its indexes using `.set(attr, val)` - you must first initialise the array, then initialise its child members. Failure to do so will result in arrays being generated as objects and may break schema validation.
 - Holding events masks the return values of `fireEvent()`, `fireHeldEvents()` etc and code will be unable to determine whether callbacks have been fired (these functions always return true while marshalling to keep any errors in your own code from being raised prematurely, if anyone has any ideas on how to handle this I'd be very interested to hear them!)
 - If no error callback is registered (which you should not really do anyway), invalid value setting while holding events with `holdEvents()` will trigger errors internally even if calling `abortHeldEvents()`. It will also prematurely trigger errors multiple times before `fireHeldEvents()` is called due to the same limitation.
 

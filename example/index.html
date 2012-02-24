@@ -185,6 +185,7 @@ outputFn(function() {
 						"additionalItems" : false
 					},
 					"stringArray" : {
+						"type" : "array",
 						"id" : "#stringArray",
 						"items" : [
 							{"type" : "string"},
@@ -418,6 +419,11 @@ outputFn(function() {
 	test.revertToState('some_state');
 });
 	outputLine('record is now:', test.getAll());
+	outputHeader("Initialising categories array by setting an array element");
+outputFn(function() {
+	test.set('categories.1', 79);
+});
+	outputLine('Note that the parent array is created correctly even though not present in the original data');
 
 	outputHeader('Final object is:');
 	outputLine(test.attributes);
