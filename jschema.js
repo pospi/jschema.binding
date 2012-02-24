@@ -188,6 +188,55 @@ var JSchema = {
 		return target;
 	},
 
+	/**
+	 * Convert between dot-notated property syntax from JSchema and uri format of whatever
+	 * schema you require inspection of.
+	 *
+	 * @param  {string} attr      path to convert
+	 * @param  {bool}   backwards if true, convert from a JSON schema uri to a JSchema path instead of vice-versa
+	 * @param  {JSONSchema} schema    schema to convert paths between
+	 * @param  {JSchema Model} model  record model object to cache the schema's fragment separator character on. Used
+	 *                         		  internally by Record instances to speed up uri translation.
+	 * @return the converted path
+	 */
+	pathToSchemaUri : function(attr, backwards, schema, model)
+	{
+		var fragmentChar = false;
+
+		// determine fragment replacement character if no model passed for caching,
+		// or model has no cached fragment separator yet.
+		if (model === undefined || !model._fragmentChar) {
+			// determine fragment identifier in order to retrieve attribute
+			var fragmentRes = schema.getValueOfProperty('fragmentResolution');
+			if (fragmentRes) {
+				switch (fragmentRes) {
+					case 'slash-delimited':
+						fragmentChar = '\/';
+						break;
+					case 'dot-delimited':
+						fragmentChar = '.';
+						break;
+				}
+			} else {
+				fragmentChar = schema.getEnvironment().getDefaultFragmentDelimiter();
+				if (fragmentChar == '/') fragmentChar = '\/';	// escape for regex
+			}
+		}
+		// if fragment successfully determined & cacheable, cache it
+		if (fragmentChar && model !== undefined) {
+			model._fragmentChar = fragmentChar;
+		}
+		// if model was passed in and already had a fragment separator cached on it, read that
+		if (!fragmentChar && model._fragmentChar) {
+			fragmentChar = model._fragmentChar;
+		}
+
+		if (backwards) {
+			return attr.replace(new RegExp(fragmentChar, 'g'), '.');
+		}
+		return attr.replace(/\./g, fragmentChar);
+	},
+
 	// mostly taken from Underscore.js isEqual()
 	isEqual : function(a, b)
 	{

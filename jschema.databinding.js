@@ -357,7 +357,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to set and create subrecords if necessary
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true, true);
+		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true, true, this.schema);
 
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
@@ -606,8 +606,6 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			// interpret error data from JSV
 			var error,
 				attr, dotattr,
-				fragmentRes,
-				fragmentChar,
 				constraintType,
 				constraintReason,
 				oldValue,
@@ -622,23 +620,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				error = r.errors[i];
 				attr = error.uri.substr(error.uri.indexOf('#') + 2);
 
-				// determine fragment identifier in order to retrieve attribute
-				fragmentRes = this.schema.getValueOfProperty('fragmentResolution');
-				if (fragmentRes) {
-					switch (fragmentRes) {
-						case 'slash-delimited':
-							fragmentChar = '\/';
-							break;
-						case 'dot-delimited':
-							fragmentChar = '.';
-							break;
-					}
-				} else {
-					fragmentChar = this.schema.getEnvironment().getDefaultFragmentDelimiter();
-					if (fragmentChar == '/') fragmentChar = '\/';	// escape for regex
-				}
-
-				dotattr = attr.replace(new RegExp(fragmentChar, 'g'), '.');
+				dotattr = JSchema.pathToSchemaUri(attr, true, this.schema, this.Model);
 				constraintType = error.attribute;
 				constraintReason = error.details;
 
@@ -786,6 +768,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		this.schema = schema;
+		this._fragmentChar = false;	// force recalculation of fragment ID for reading schema paths, may have changed
 	},
 
 	//=============================================================================================
@@ -1045,7 +1028,6 @@ JSchema.Binding.Create = function(schema, options)
 			newO;
 
 		JSchema.extendAndUnset(newCtor.prototype, ctor.prototype);
-		// console.log(newO, newCtor.prototype === newO.prototype);
 
 		newO = new newCtor();
 		newO.Model = ctor;
@@ -1063,19 +1045,24 @@ JSchema.Binding.Create = function(schema, options)
 		return newO;
 	};
 
-	// add methods
+	// add base methods
 	JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
 
 	// reference the schema onto the Model so we can use it elsewhere
 	ctor.schema = schema;
-	// add static array for storing instances of this record type, and
-	// a static method for retrieving them
+
+	// add static arrays for referencing instances of this record type
 	ctor.instances = {};
 	ctor.newInstances = [];
+
+	// add private variables for Models
+	ctor._fragmentChar = false;		// cached fragment identifier interpreted from reading the record's schema
+
 	// add Model methods
 	ctor.getRecordById = ctor.prototype.getRecordById;
 	ctor.getInstanceCount = ctor.prototype.getInstanceCount;
 	ctor.getAllInstances = ctor.prototype.getAllInstances;
+	ctor.setSchema = ctor.prototype.setSchema;
 	ctor.addEvent = function() {
 		this.prototype.addEvent.apply(this.prototype, arguments);
 	};
