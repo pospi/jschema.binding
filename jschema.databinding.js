@@ -203,9 +203,6 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			  	}
 			} else if (!JSchema.isEqual(old[attr], now[attr])) {
 				changed || (changed = {});
-				if (typeof now[attr] == 'undefined') {
-					now[attr] = null;	// ensure that the deletion is present. undefined won't show up.
-				}
 				changed[attr] = includePrevValue ? [old[attr], now[attr]] : now[attr];
 			}
 			delete now[attr];
@@ -283,7 +280,29 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		if (!this._savedStates[key]) {
 			return false;
 		}
-		this.attributes = JSchema.extendAndUnset({}, this._savedStates[key]);
+
+		var validationPaused = false,
+			prevs = this._previousAttributes;
+
+		if (this._validating) {	// pause validation so we can set the object empty before applying the state
+			this.pauseValidation();
+			validationPaused = true;
+		}
+
+		this.holdEvents();		// hold all events
+
+		// revert to the state in 1 step by:
+		// - getting a diff between our current attributes and an empty object to erase all current data
+		// - merging the saved state into the array to simultaneously unset unneeded values and overwrite the old ones
+		// - merging the whole thing back into the current object to update its data
+		this.set(JSchema.extendAndUnset(this.getChangedAttributes(false, this.attributes, {}), this._savedStates[key]));
+
+		this.fireHeldEvents();	// fire changes
+
+		if (validationPaused) {	// resume validation again if we were responsible for pausing it
+			this.resumeValidation();
+		}
+		return true;
 	},
 
 	//=============================================================================================
