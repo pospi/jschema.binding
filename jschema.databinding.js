@@ -186,11 +186,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	getChangedAttributes : function(includePrevValue, old, now)
 	{
-		now || (now = this.attributes);
+		now = JSchema.extendAndUnset(jQuery.isArray(now) ? [] : {}, now || this.attributes)	/* LIBCOMPAT */
 		old || (old = this._previousAttributes);
+
 		var changes,
-			changed = false;
-		for (var attr in now) {
+			changed = false,
+			attr;
+
+		for (attr in old) {
 			if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(old[attr]))	/* LIBCOMPAT */
 			  || (jQuery.isArray(now[attr]) && jQuery.isArray(old[attr])) ) {			/* LIBCOMPAT */
 			  	changes = this.getChangedAttributes(includePrevValue, old[attr], now[attr]);
@@ -200,9 +203,21 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			  	}
 			} else if (!JSchema.isEqual(old[attr], now[attr])) {
 				changed || (changed = {});
+				if (typeof now[attr] == 'undefined') {
+					now[attr] = null;	// ensure that the deletion is present. undefined won't show up.
+				}
 				changed[attr] = includePrevValue ? [old[attr], now[attr]] : now[attr];
 			}
+			delete now[attr];
 		}
+
+		for (attr in now) {
+			if (typeof now[attr] == 'undefined') {
+				continue;	// undefined replaced with undefined. no change.
+			}
+			changed[attr] = includePrevValue ? [null, now[attr]] : now[attr];
+		}
+
 		return changed;
 	},
 
