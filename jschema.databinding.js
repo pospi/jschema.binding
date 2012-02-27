@@ -839,7 +839,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// check for a primitive value being replaced by an object, fire child create events when necessary
 		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
-			this._fireChildCreateEvents(propertyString, newValue);
+			this._fireChildAttributeEvents(propertyString, undefined, newValue);
+		} else if (!jQuery.isArray(newValue) && !jQuery.isPlainObject(newValue) && (jQuery.isArray(oldValue) || jQuery.isPlainObject(oldValue))) {	/* LIBCOMPAT */
+			this._fireChildAttributeEvents(propertyString, oldValue, undefined);
 		}
 	},
 
@@ -982,21 +984,35 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 * When primitives are replaced by complex properties, we must recurse into
 	 * the new objects and fire create events for all child properties.
 	 */
-	_fireChildCreateEvents : function(attr, obj)
+	_fireChildAttributeEvents : function(attr, oldObj, newObj)
 	{
-		var eventName, propertyString, newVal, i;
+		var eventName, propertyString, newVal, i,
+			eventType, obj;
+
+		if (typeof oldObj == 'undefined') {
+			eventType = 'create';
+			obj = newObj;
+		} else {
+			eventType = 'delete';
+			obj = oldObj;
+		}
 
 		for (i in obj) {
 			if (!obj.hasOwnProperty(i)) {
 				continue;
 			}
 			propertyString = attr + '.' + i;
-			eventName = 'change.create.' + propertyString;
-			newVal = JSchema.dotSearchObject(obj, i);
-			this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, undefined, newVal, propertyString, eventName);
+			eventName = 'change.' + eventType + '.' + propertyString;
+			newVal = obj[i];
+
+			if (eventType == 'create') {
+				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, undefined, newVal, propertyString, eventName);
+			} else {
+				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, newVal, undefined, propertyString, eventName);
+			}
 
 			if (jQuery.isArray(newVal) || jQuery.isPlainObject(newVal)) { /* LIBCOMPAT */
-				this._fireChildCreateEvents(propertyString, newVal);
+				this._fireChildAttributeEvents(propertyString, oldObj[i] || undefined, newObj[i] || undefined);
 			}
 		}
 	}
