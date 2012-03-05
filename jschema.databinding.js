@@ -246,7 +246,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		if (stateName && !this._savedStates[stateName]) {
 			return null;
 		}
-		return JSchema.extendAndUnset({}, stateName ? this._savedStates[stateName] : this._previousAttributes);
+		return JSchema.extendAndUnset(jQuery.isArray(this._previousAttributes) ? [] : {}, stateName ? this._savedStates[stateName] : this._previousAttributes);	/* LIBCOMPAT */
 	},
 
 	/**
