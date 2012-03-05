@@ -113,7 +113,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Determine whether we have an attribute
 	has : function(attr)
 	{
-		return JSchema.dotSearchObject(this.attributes, attr) != null;
+		return JSchema.dotSearchObject(this.getAttributes(), attr) != null;
 	},
 
 	// Get the value of an attribute.
@@ -121,7 +121,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Returns undefined if the attribute is not found.
 	get : function(attr)
 	{
-		return JSchema.dotSearchObject(this.attributes, attr);
+		return JSchema.dotSearchObject(this.getAttributes(), attr);
 	},
 
 	// get the record ID. only works when idField option is provided
