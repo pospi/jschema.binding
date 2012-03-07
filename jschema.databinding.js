@@ -488,7 +488,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			for (attr in old) {
 				this._propertyChange(attr, false, old[attr], undefined, attr);	// fire change events for all removed attributes
 			}
-			this.change();
+			this.fireEvent('change.delete', this, this.getPreviousAttributes());
+			this.fireEvent('change', this, this.getPreviousAttributes());
 
 			this.fireHeldEvents();
 		}
