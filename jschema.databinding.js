@@ -1048,7 +1048,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			}
 
 			if (jQuery.isArray(newVal) || jQuery.isPlainObject(newVal)) { /* LIBCOMPAT */
-				this._fireChildAttributeEvents(propertyString, oldObj[i] || undefined, newObj[i] || undefined);
+				this._fireChildAttributeEvents(propertyString, typeof oldObj == 'undefined' ? undefined : (oldObj[i] || undefined), typeof newObj == 'undefined' ? undefined : (newObj[i] || undefined));
 			}
 		}
 	}
