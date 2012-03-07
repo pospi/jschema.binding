@@ -186,7 +186,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	getChangedAttributes : function(includePrevValue, old, now)
 	{
-		now = JSchema.extendAndUnset(jQuery.isArray(now) ? [] : {}, now || this.attributes)	/* LIBCOMPAT */
+		now = JSchema.extendAndUnset(jQuery.isArray(now) ? [] : {}, now || this.getAttributes())	/* LIBCOMPAT */
 		old || (old = this._previousAttributes);
 
 		var changes,
@@ -212,6 +212,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			if (typeof now[attr] == 'undefined') {
 				continue;	// undefined replaced with undefined. no change.
 			}
+			changed || (changed = {});
 			changed[attr] = includePrevValue ? [null, now[attr]] : now[attr];
 		}
 
