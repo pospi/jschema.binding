@@ -67,7 +67,17 @@ var JSchema = {
 		if (!uri) {	// attempt loading URI from the schema's ID if not provided
 			uri = schema.id;
 		}
-		return JSchema.Validator.createSchema(schema, undefined, uri);
+		try {
+			var schema = JSchema.Validator.createSchema(schema, undefined, uri);
+			return schema;
+		} catch (e) {
+			if (e.message && e.details) {
+				// add specifics of the error to make things easier to debug
+				e.message += ": " + e.details;
+			}
+			throw e;
+		}
+		return null;
 	},
 
 	/**
