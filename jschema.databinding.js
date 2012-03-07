@@ -859,7 +859,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				}
 			}
 			if (newValue) {
-				if (this.Model.instances[newValue]) {
+				if (this.Model.instances[newValue] && this.Model.instances[newValue] !== this) {
 					// :TODO: this could be handled better after implementing undo
 					throw new Error("Cannot reassign record ID: record already exists");
 				}
