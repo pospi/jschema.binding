@@ -254,7 +254,7 @@ These methods are available to all individual Record instances.
 - `eraseState(key)`<br />
 	Deletes a state previous saved with `saveState()`.
 - `revertToState(key)`<br />
-	Reverts a record to one of its previously saved states. Note that this does not remove the state or perform any kind of 'undo stack' operation, all prior saved states will persist.
+	Reverts a record to one of its previously saved states. Note that this does not remove the state or perform any kind of 'undo stack' operation, all prior saved states will persist. Any changes to the record will fire as usual.
 - `getPrevious(attribute, since)`<br />
 	Retrieve a particular attribute from before the last change using dot notation, or from a particular point in time (previously stored by `saveState()`) if `since` is specified.
 - `getPreviousAttributes(since)`<br />
@@ -291,13 +291,14 @@ These methods are internal to JSchema most of the time, but they're there to use
 
 TODO
 ----
-- Retrieve default values from schema when **reading**
-	- when creating, events should fire from undefined => defaults
-- Allow nesting record instances inside each other
 - Archive old attributes when event deferring is enabled
 	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
-- fire events in `revertToState()`
 - `clear()` events
+- Allow nesting record instances inside each other
+- Retrieve default values from schema when **reading**
+	- when creating, events should fire from undefined => defaults
+- validate readonly properties
+- when objects within arrays are set but unmodified, a change is detected on the object
 - ensure all callback contexts are being carried through to execution
 - fire events in correct order internally in databinding to reduce sort time when firing
 - Add error callback value passing for dependencies
