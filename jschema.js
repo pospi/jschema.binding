@@ -311,7 +311,7 @@ var JSchema = {
 		// Recursive comparison of contents.
 		for (var i = 0; i < aKeys.length; ++i) {
 			var key = aKeys[i];
-			if (!(key in b) || !this._isEqual(a[key], b[key])) {
+			if (!(key in b) || !JSchema.isEqual(a[key], b[key])) {
 				return false;
 			}
 		}
