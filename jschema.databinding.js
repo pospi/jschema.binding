@@ -194,8 +194,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			attr;
 
 		for (attr in old) {
-			if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(old[attr]))	/* LIBCOMPAT */
-			  || (jQuery.isArray(now[attr]) && jQuery.isArray(old[attr])) ) {			/* LIBCOMPAT */
+			if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))		/* LIBCOMPAT */
+			  && (jQuery.isPlainObject(old[attr]) || jQuery.isArray(old[attr])) ) {	/* LIBCOMPAT */
 			  	changes = this.getChangedAttributes(includePrevValue, old[attr], now[attr]);
 			  	if (changes) {
 			  		changed || (changed = {});
