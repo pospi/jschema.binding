@@ -170,7 +170,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		if (attr) {
 			return JSchema.dotSearchObject(changeTarget, attr) != JSchema.dotSearchObject(this.attributes, attr);
 		}
-		return JSchema.isEqual(this.attributes, changeTarget);
+		return !JSchema.isEqual(this.attributes, changeTarget);
 	},
 
 	/**
