@@ -637,7 +637,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	validate : function(attrs, internalCall)
 	{
-		if (internalCall && !this._validating) {
+		if ((internalCall && !this._validating) || !this.schema) {
 			return true;
 		}
 
@@ -797,15 +797,16 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// changes the schema used to validate the record
 	setSchema : function(schema)
 	{
-		if (!schema) {
-			throw "Could not change JSchema.Binding Record schema - not a JSONSchema!";
-		}
 		// attempt registering the schema if it is not already a reference to one
-		if (!JSV.isJSONSchema(schema)) {
+		if (!JSV.isJSONSchema(schema) && jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
 			// if it has an id, check whether it's already been registered
-			if (!schema['id'] || !(schema = JSchema.getSchema(schema.id))) {
+			var tempSchema = null;
+			if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
 				// and if not, register it
 				schema = JSchema.registerSchema(schema);
+			}
+			if (tempSchema) {
+				schema = tempSchema;
 			}
 		}
 
@@ -1064,11 +1065,8 @@ JSchema.Binding.prototype.getAll = JSchema.Binding.prototype.getAttributes;
 // Creates a Binding subclass with the desired validation schema and options
 JSchema.Binding.Create = function(schema, options)
 {
-	if (!schema) {
-		throw "Could not create JSchema.Binding Model - schema is not a JSONSchema!";
-	}
 	// attempt registering the schema if it is not already a reference to one
-	if (!JSV.isJSONSchema(schema)) {
+	if (!JSV.isJSONSchema(schema) && jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
 		// if it has an id, check whether it's already been registered
 		var tempSchema = null;
 		if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
