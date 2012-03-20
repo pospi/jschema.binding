@@ -532,7 +532,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this._bubblePropertyChange(attr, undefined, val);
+			this._bubblePropertyChange(attr + '.' + newLen, undefined, val);
 		}
 
 		return newLen;
@@ -573,7 +573,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire events for all changes
 		if (!suppressEvent) {
-			this._bubblePropertyChange(attr, this.getPrevious(attr), undefined);
+			this._bubblePropertyChange(attr + '.' + newLen, this.getPrevious(attr + '.' + newLen), undefined);
 		}
 
 		return newLen;
