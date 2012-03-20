@@ -352,8 +352,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		// Update attributes
 		for (var attr in attrs) {
 			var val = attrs[attr];
-			if ( (jQuery.isPlainObject(now[attr]) && jQuery.isPlainObject(val))	/* LIBCOMPAT */
-			  || (jQuery.isArray(now[attr]) && jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
+			if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))	/* LIBCOMPAT */
+			  && (jQuery.isPlainObject(val) || jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
 				var result = this._handleObjectChange(attr, now[attr], val, suppressEvent, isCreating);
 				now[attr] = result[0];
 				if (result[1]) {
@@ -893,6 +893,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	_handleObjectChange : function(eventStr, oldObject, newObject, suppressEvent, isCreating)
 	{
 		var childrenChanged = false,
+			copyIsArray, srcIsArray,
 			src,
 			copy,
 			clone;
@@ -923,10 +924,10 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 			// Recurse if we're merging plain objects or arrays
 			copyIsArray = false;
+			srcIsArray = false;
 			if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
-				if ( copyIsArray ) {
-					copyIsArray = false;
-					clone = src && jQuery.isArray(src) ? src : [];	/* LIBCOMPAT */
+				if ( (!src && copyIsArray) || (srcIsArray = jQuery.isArray(src)) ) {	/* LIBCOMPAT */
+					clone = src && srcIsArray ? src : [];
 				} else {
 					clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 				}

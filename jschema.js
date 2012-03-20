@@ -99,7 +99,7 @@ var JSchema = {
 	 */
 	extendAndUnset : function()
 	{
-		var options, name, src, copy, copyIsArray, clone,
+		var options, name, src, copy, copyIsArray, srcIsArray, clone,
 			target = arguments[0] || {},
 			i = 1,
 			length = arguments.length;
@@ -124,12 +124,13 @@ var JSchema = {
 
 					// Recurse if we're merging plain objects or arrays
 					if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
-						if ( copyIsArray ) {
-							copyIsArray = false;
-							clone = src && jQuery.isArray(src) ? src : [];	/* LIBCOMPAT */
+						if ( (!src && copyIsArray) || (srcIsArray = jQuery.isArray(src)) ) {	/* LIBCOMPAT */
+							clone = src && srcIsArray ? src : [];
 						} else {
 							clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 						}
+						copyIsArray = false;
+						srcIsArray = false;
 
 						// Never move original objects, clone them
 						target[ name ] = JSchema.extendAndUnset( clone, copy );
