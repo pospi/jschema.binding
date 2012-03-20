@@ -872,7 +872,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// fire this event
 		var eventName = 'change.' + changeAction + '.' + propertyString;
-		this.fireEventUntilDepth(eventName, stopAtLevel, this, oldValue, newValue, propertyString, eventName);
+		this.fireEventUntilDepth(eventName, stopAtLevel, this, JSchema.deepCopy(oldValue), JSchema.deepCopy(newValue), propertyString, eventName);
 
 		// check for a primitive value being replaced by an object, fire child create events when necessary
 		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
@@ -1043,9 +1043,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			newVal = obj[i];
 
 			if (eventType == 'create') {
-				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, undefined, newVal, propertyString, eventName);
+				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, undefined, JSchema.deepCopy(newVal), propertyString, eventName);
 			} else {
-				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, newVal, undefined, propertyString, eventName);
+				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, JSchema.deepCopy(newVal), undefined, propertyString, eventName);
 			}
 
 			if (jQuery.isArray(newVal) || jQuery.isPlainObject(newVal)) { /* LIBCOMPAT */

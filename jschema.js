@@ -145,6 +145,22 @@ var JSchema = {
 	},
 
 	/**
+	 * Create a deep copy of some object
+	 * @param  {mixed} something thing to copy
+	 * @return a copy of the thing
+	 */
+	deepCopy : function(something)
+	{
+		if (jQuery.isPlainObject(something)) {	/* LIBCOMPAT */
+			return JSchema.extendAndUnset({}, something);
+		} else if (jQuery.isArray(something)) {	/* LIBCOMPAT */
+			return JSchema.extendAndUnset([], something);
+		} else {
+			return something;
+		}
+	},
+
+	/**
 	 * Retrieve a property in a JavaScript object by using
 	 * dot notation to index child members.
 	 * When used without returnParent=true, returns the property specified.
