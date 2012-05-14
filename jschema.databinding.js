@@ -109,6 +109,13 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		return JSchema.dotSearchObject(this.getAttributes(), attr);
 	},
 
+	// Retrieves a pointer to another JSchema.Binding record instance inserted
+	// as part of this record's data attributes
+	getSubrecord : function(attr)
+	{
+		return this._subObjects[attr] || null;
+	},
+
 	// get the record ID. only works when idField option is provided
 	getId : function()
 	{
@@ -337,7 +344,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		// Update attributes
 		for (var attr in attrs) {
 			var val = attrs[attr];
-			if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))	/* LIBCOMPAT */
+			if (JSchema.isRecord(now[attr]) || JSchema.isRecord(val)) {			// subrecord insertion
+				if (JSchema.isRecord(val)) {
+					this._subObjects[attr] = val;
+					now[attr] = val.attributes;
+				} else {
+					this._subObjects[attr].set(val);
+				}
+			} else if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))	/* LIBCOMPAT */
 			  && (jQuery.isPlainObject(val) || jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
 				var result = this._handleObjectChange(attr, now[attr], val, suppressEvent, isCreating);
 				now[attr] = result[0];
@@ -379,27 +393,35 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Set a data attribute by dot notation index
 	_setByIndex : function(attr, newVal, suppressEvent)
 	{
-		// Create an object with the previous attribute set to modify and validate with
+		// backup existing attributes in case the change is invalid
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to set and create subrecords if necessary
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true, true, this.schema);
+		var searchResult = JSchema.dotSearchObject(this.attributes, attr, true, true, this.schema);
 
 		var parent = searchResult[0],
 			value = parent[searchResult[1]],
 			path = searchResult[2];
 
+		// check for insertion of another JSchema record
+		if (JSchema.isRecord(newVal)) {			// new child record passed
+			this._subObjects[attr] = newVal;	// store a reference to the full record
+			newVal = newVal.attributes;			// link the new value to the other record's data
+		} else if (this._subObjects[attr]) {
+			this._subObjects[attr].set(newVal);	// record already present, raw data passed: set child record's data
+		}
+
 		// set the property and check the new attributes for errors
 		parent[searchResult[1]] = newVal;
-		if (!this.validate(tempAttrs, true)) {
+		if (!this.validate(this.attributes, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
+			this.attributes = tempAttrs;
 			return this;
 		}
 
-		// copy over our current attributes to the previous
-		this._previousAttributes = this.getAttributes();
-		this.attributes = tempAttrs;
+		// backup pre-change attributes
+		this._previousAttributes = tempAttrs;
 		this._dirty = true;
 
 		// fire events for all changes
@@ -413,11 +435,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Remove an attribute from the model, firing a "change" event
 	unset : function(attr, suppressEvent)
 	{
-		// Create an object with the previous attribute set to modify and validate with
+		// backup existing attributes in case the change is invalid
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to remove
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+		var searchResult = JSchema.dotSearchObject(this.attributes, attr, true);
 		if (typeof searchResult[0] == 'undefined') return this;	// property wasn't set
 
 		var parent = searchResult[0],
@@ -426,15 +448,20 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// remove the property from the original temp object by reference
 		delete parent[searchResult[1]];
-		if (!this.validate(tempAttrs, true)) {
+		if (!this.validate(this.attributes, true)) {
 			// if the new attributes don't pass validation, abort. No need to return
 			// a failure case since an error callback is mandatory.
+			this.attributes = tempAttrs;
 			return this;
 		}
 
-		// copy over our current attributes to the previous
-		this._previousAttributes = this.getAttributes();
-		this.attributes = tempAttrs;
+		// remove subobject reference if there is one at this position within the record
+		if (this._subObjects[attr]) {
+			delete this._subObjects[attr];
+		}
+
+		// backup pre-change attributes
+		this._previousAttributes = tempAttrs;
 		this._dirty = true;
 
 		// fire events for all changes
@@ -463,6 +490,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		// update data
 		this._previousAttributes = this.getAttributes();
 		this.attributes = {};
+		this._subObjects = {};
 		this._dirty = true;
 
 		// run change events
@@ -490,11 +518,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	push : function(attr, val, suppressEvent)
 	{
-		// Create an object with the previous attribute set to modify and validate with
+		// backup existing attributes in case the change is invalid
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to remove
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+		var searchResult = JSchema.dotSearchObject(this.attributes, attr, true);
 		if (typeof searchResult[0] == 'undefined') return false;	// property wasn't set
 
 		var parent = searchResult[0],
@@ -504,15 +532,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// append to the target array, assuming it is one. If not, an error will be thrown.
 		value.push(val);
-		if (!this.validate(tempAttrs, true)) {
-			// if the new attributes don't pass validation, abort. No need to return
-			// a failure case since an error callback is mandatory.
+		if (!this.validate(this.attributes, true)) {
+			// if the new attributes don't pass validation, abort after resetting the sttributes as they were
+			this.attributes = tempAttrs;
 			return false;
 		}
 
-		// copy over our current attributes to the previous
-		this._previousAttributes = this.getAttributes();
-		this.attributes = tempAttrs;
+		// backup pre-change attributes
+		this._previousAttributes = tempAttrs;
 		this._dirty = true;
 
 		// fire events for all changes
@@ -531,11 +558,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	pop : function(attr, suppressEvent)
 	{
-		// Create an object with the previous attribute set to modify and validate with
+		// backup existing attributes in case the change is invalid
 		var tempAttrs = this.getAttributes();
 
 		// Search temporary object for the property to remove
-		var searchResult = JSchema.dotSearchObject(tempAttrs, attr, true);
+		var searchResult = JSchema.dotSearchObject(this.attributes, attr, true);
 		if (typeof searchResult[0] == 'undefined') return false;	// property wasn't set
 
 		var parent = searchResult[0],
@@ -545,15 +572,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// pop from the target array, assuming it is one. If not, an error will be thrown.
 		value.pop();
-		if (!this.validate(tempAttrs, true)) {
-			// if the new attributes don't pass validation, abort. No need to return
-			// a failure case since an error callback is mandatory.
+		if (!this.validate(this.attributes, true)) {
+			// if the new attributes don't pass validation, abort after resetting the sttributes as they were
+			this.attributes = tempAttrs;
 			return false;
 		}
 
-		// copy over our current attributes to the previous
-		this._previousAttributes = this.getAttributes();
-		this.attributes = tempAttrs;
+		// backup pre-change attributes
+		this._previousAttributes = tempAttrs;
 		this._dirty = true;
 
 		// fire events for all changes
@@ -580,6 +606,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 		// create the copy
 		var obj = new this.Model(attribs, this.options);
+
+		// reference all subobjects into the cloned record at their positions as well
+		for (var subAttr in this._subObjects) {
+			obj.set(subAttr, this._subObjects[subAttr], true);
+		}
 
 		// clone events if specified
 		if (cloneEvents) {
@@ -880,8 +911,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		for (var name in newObject) {
-			src = oldObject[ name ];
-			copy = newObject[ name ];
+			src = oldObject[name];
+			copy = newObject[name];
 
 			// Prevent never-ending loop
 			if ( oldObject === copy ) {
@@ -894,7 +925,14 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			// Recurse if we're merging plain objects or arrays
 			copyIsArray = false;
 			srcIsArray = false;
-			if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
+			if (JSchema.isRecord(src) || JSchema.isRecord(copy)) {			// subrecord insertion
+				if (JSchema.isRecord(copy)) {
+					this._subObjects[newEventStr] = copy;
+					oldObject[name] = copy.attributes;
+				} else {
+					this._subObjects[newEventStr].set(copy);
+				}
+			} else if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
 				if ( (!src && copyIsArray) || (srcIsArray = jQuery.isArray(src)) ) {	/* LIBCOMPAT */
 					clone = src && srcIsArray ? src : [];
 				} else {
@@ -903,7 +941,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
 				var results = this._handleObjectChange(newEventStr, clone, copy, suppressEvent, isCreating);
 
-				oldObject[ name ] = results[0];
+				oldObject[name] = results[0];
 				childrenChanged = true;			// tell our parent to fire modified, too
 
 				// if children were modified, fire a change event for us too!
@@ -911,7 +949,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 					this._propertyChange(newEventStr, isCreating ? undefined : src, oldObject[name]);
 				}
 			} else if (src != copy) {
-				oldObject[ name ] = copy;
+				oldObject[name] = copy;
 				childrenChanged = true;	// tell our parent to fire modified, too
 
 				// fire a change event for the modified property
@@ -1073,6 +1111,7 @@ JSchema.Binding.Create = function(schema, modelOptions)
 	var Record = function(attrs, options) {
 		// private record variables
 		this.attributes = {};
+		this._subObjects = {};
 		this._previousAttributes = null;
 		this._savedStates = {};
 		this._dirty = false;
