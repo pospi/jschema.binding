@@ -579,7 +579,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		// create the copy
-		var obj = new this.Model.constructor(attribs, this.options);
+		var obj = new this.Model(attribs, this.options);
 
 		// clone events if specified
 		if (cloneEvents) {
@@ -1078,10 +1078,11 @@ JSchema.Binding.Create = function(schema, modelOptions)
 		this._dirty = false;
 		this._validating = true;
 
+		// detach instance callbacks from the prototype's to ensure we only modify our own copies
 		this._callbacks = JSchema.extendAndUnset({}, Record._callbacks);
 
 		// add model reference
-		this.Model = Model;
+		this.Model = Record;
 
 		// override default options from model if instance options provided, replaces options from model
 		if (options) {
@@ -1105,7 +1106,6 @@ JSchema.Binding.Create = function(schema, modelOptions)
 			}
 		}
 	};
-	Model.constructor = Record;	// assign a constructor reference for use in clone()
 	Record.prototype = Model;	// set the prototype for all record instances
 	Record.__proto__ = Model;	// set the prototype for the model
 
