@@ -26,47 +26,29 @@
  */
 
 /**
- * Creates a new JSchema.Binding instance, aka a data record, aka object instance
+ * Creates a new JSchema.Binding data Model
  *
- * @param object attrs   initial attributes for this data record
- * @param object schema  JSON schema document for validation, as a javascript object
- * @param object options options for this validator:
- *                     - idField: 			key name of the object's attributes to use to
- *                     						determine record uniqueness. Defaults to 'id'.
- *                     - doCreateEvents:	if false, don't fire any events while constructing this
- *                     						object. Defaults to false.
- *                     - clearIdOnClone:	if true, records cloned from others can automatically have their
- *                     						ID fields cleared. Defaults to false.
- *                     - validateCreation:	if true, perform data validation when loading initial record data
- *                     						according to its schema. Defaults to false.
+ * @see JSchema.Binding.Create
  */
-JSchema.Binding = function(attrs, schema, options)
+JSchema.Binding = function(schema, modelOptions)
 {
+	// reference the schema onto the Model so we can access it elsewhere
 	this.schema = schema;
+	// store options as well
+	this.options = modelOptions || {};
 
-	// read options
-	this.options = {};
-	this.options.idField		= options.idField || 'id';
-	this.options.validateCreation = options.validateCreation || false;
-	this.options.doCreateEvents	= options.doCreateEvents || false;
-	this.options.clearIdOnClone	= options.clearIdOnClone === false ? false : true;
+	// add static arrays for referencing instances of this record type
+	this.instances = {};
+	this.newInstances = [];
 
-	// set initial attributes
-	this.set(attrs, !options.doCreateEvents, undefined, true);
+	// add private Model variables
+	this._fragmentChar = false;		// cached fragment identifier interpreted from reading the record's schema
 };
 
 JSchema.extendAndUnset(JSchema.Binding.prototype, {
 
-	attributes : {},			// our properties
-	_previousAttributes : null,	// A snapshot of the record's previous attributes, taken immediately after the last "change" event was fired.
-	_savedStates : {},			// various snapshots of the record data saved into buckets. This allows for history actions and state saving.
-	_dirty : false,				// true if object is dirty (needs to be pushed to server)
-	_validating : true,			// true if object should perform validation when updating data
-
 	//=============================================================================================
-	//	Accessors
-
-	//======= Object querying (class methods) ========
+	//	Model (class / static) methods
 
 	getRecordById : function(id)
 	{
@@ -101,6 +83,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 		return instances;
 	},
+
+	//=============================================================================================
+	//	Accessors
 
 	//======= Current state ========
 
@@ -586,11 +571,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	clone : function(cloneEvents)
 	{
 		// create a new, blank object with our attributes
-		var newCtor = function(){},
-			obj,
-			attribs = this.getAttributes();
-
-		JSchema.extendAndUnset(newCtor.prototype, this.Model.prototype);
+		var attribs = this.getAttributes();
 
 		// clear the ID attribute for the new record, if configured
 		if (this.options.idField && this.options.clearIdOnClone) {
@@ -598,19 +579,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		// create the copy
-		obj = new newCtor();
-		obj.Model = this.Model;
-		JSchema.Binding.call(obj, attribs, this.schema, this.options);
-
-		// register it with our model
-		if (obj.options.idField) {
-			var newId = obj.getId();
-			if (newId) {
-				this.Model.instances[newId] = obj;
-			} else {
-				this.Model.newInstances.push(obj);
-			}
-		}
+		var obj = new this.Model.constructor(attribs, this.options);
 
 		// clone events if specified
 		if (cloneEvents) {
@@ -1061,12 +1030,31 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 JSchema.Binding.prototype.getAll = JSchema.Binding.prototype.getAttributes;
 
 //=============================================================================================
-// Static methods
 
-// Creates a Binding subclass with the desired validation schema and options
-JSchema.Binding.Create = function(schema, options)
+/**
+ * Creates a new JSchema.Binding Model, aka a data type, aka object class
+ *
+ * @param object schema  JSON schema object for validating instances of this Model
+ * @param object options default options for instances of this validator:
+ *                     - idField: 			key name of the object's attributes to use to
+ *                     						determine record uniqueness. Defaults to 'id'.
+ *                     - doCreateEvents:	if false, don't fire any events while constructing this
+ *                     						object. Defaults to false.
+ *                     - clearIdOnClone:	if true, records cloned from others can automatically have their
+ *                     						ID fields cleared. Defaults to false.
+ *                     - validateCreation:	if true, perform data validation when loading initial record data
+ *                     						according to its schema. Defaults to false.
+ *
+ * This method returns function objects for use in constructing Record instances, which take the
+ * following constructor arguments:
+ *
+ * @param object attrs   initial attributes for this data record
+ * @param object options options for this record instance, in the same form as for the Model
+ */
+JSchema.Binding.Create = function(schema, modelOptions)
 {
-	// attempt registering the schema if it is not already a reference to one
+	// :TODO: allow creating by schema ID
+	// preprocess the schema and attempt registration the schema if it is not already a JSONSchema instance
 	if (!JSV.isJSONSchema(schema) && jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
 		// if it has an id, check whether it's already been registered
 		var tempSchema = null;
@@ -1079,58 +1067,49 @@ JSchema.Binding.Create = function(schema, options)
 		}
 	}
 
-	options = options || {};
-	var ctor = function(attrs, instanceOpts) {
-		var newCtor = function(){},
-			newO;
+	// create a new binding instance to use as our Model
+	var Model = new JSchema.Binding(schema, modelOptions);
 
-		JSchema.extendAndUnset(newCtor.prototype, ctor.prototype);
+	var Record = function(attrs, options) {
+		// private record variables
+		this.attributes = {};
+		this._previousAttributes = null;
+		this._savedStates = {};
+		this._dirty = false;
+		this._validating = true;
 
-		newO = new newCtor();
-		newO.Model = ctor;
-		JSchema.Binding.call(newO, attrs, ctor.schema, instanceOpts || options);
+		this._callbacks = JSchema.extendAndUnset({}, Record._callbacks);
 
-		if (newO.options.idField) {
-			var newId = newO.getId();
-			if (newId) {
-				ctor.instances[newId] = newO;
-			} else {
-				ctor.newInstances.push(newO);
-			}
+		// add model reference
+		this.Model = Model;
+
+		// override default options from model if instance options provided, replaces options from model
+		if (options) {
+			this.options = {};
+			this.options.idField		= options.idField || 'id';
+			this.options.validateCreation = options.validateCreation || false;
+			this.options.doCreateEvents	= options.doCreateEvents || false;
+			this.options.clearIdOnClone	= options.clearIdOnClone === false ? false : true;
 		}
 
-		return newO;
+		// set initial attributes
+		this.set(attrs, !this.options.doCreateEvents, undefined, true);
+
+		// assign to Model's ID register
+		if (this.options.idField) {
+			var newId = this.getId();
+			if (newId) {
+				this.Model.instances[newId] = this;
+			} else {
+				this.Model.newInstances.push(this);
+			}
+		}
 	};
+	Model.constructor = Record;	// assign a constructor reference for use in clone()
+	Record.prototype = Model;	// set the prototype for all record instances
+	Record.__proto__ = Model;	// set the prototype for the model
 
-	// add base methods
-	JSchema.extendAndUnset(ctor.prototype, JSchema.Binding.prototype);
-
-	// reference the schema onto the Model so we can use it elsewhere
-	ctor.schema = schema;
-
-	// add static arrays for referencing instances of this record type
-	ctor.instances = {};
-	ctor.newInstances = [];
-
-	// add private variables for Models
-	ctor._fragmentChar = false;		// cached fragment identifier interpreted from reading the record's schema
-
-	// add Model methods
-	ctor.getRecordById = ctor.prototype.getRecordById;
-	ctor.getInstanceCount = ctor.prototype.getInstanceCount;
-	ctor.getAllInstances = ctor.prototype.getAllInstances;
-	ctor.setSchema = ctor.prototype.setSchema;
-	ctor.addEvent = function() {
-		this.prototype.addEvent.apply(this.prototype, arguments);
-	};
-	ctor.addEvents = function() {
-		this.prototype.addEvents.apply(this.prototype, arguments);
-	};
-	ctor.removeEvent = function() {
-		this.prototype.removeEvent.apply(this.prototype, arguments);
-	};
-
-	return ctor;
+	return Record;
 };
 
 }).call(this, jQuery);	/* LIBCOMPAT */
