@@ -31,14 +31,14 @@ Features
 	  Allows events to be pooled, combined and fired as a single logical 'change'.
 	- **Callback data consistency**<br />
 	  Record state is predictable in all callbacks - firing is deferred until the state of the object has completed updating.
+- **Change handling**<br />
+  Records can be checked for modifications to allow intelligent serverside data pushing, and uploaded propertysets can be refined to only those modified. Snapshots of data can be taken at any point in time and compared with one another or checked for changes easily.
 - **JSON schema validation**<br />
   Naturally, all changes to data objects are validated against your schema in real-time and can provide feedback of any changes and errors straight to your UI or other application code.
 	- **Enhanced errors**<br />
 	  JSV's standard error objects are augmented with attributes for the current value,
 	_ **Error bubbling**<br />
 	  Using the same event mechanism as with change events, errors bubble up to their parent properties. The array of schema error data at each point in the chain contains all errors relevant for that object and all its child properties.
-- **Change handling**<br />
-  Records can be checked for modifications to allow intelligent serverside data pushing, and uploaded propertysets can be refined to only those modified. Snapshots of data can be taken at any point in time and compared with one another or checked for changes easily.
 - **ID tracking**<br />
   When configured to do so, record IDs are automatically tracked and record instances can be retrieved from your models via `getRecordById()`.
 
@@ -161,6 +161,12 @@ These methods can be found on the global `JSchema` object.
 
 - `getSchema(uri)`<br />
 	Allows retrieving a schema previously registered with `registerSchema()`.
+
+- `isRecord(thing[, model])`<br />
+	Determine whether the passed argument is a JSchema.Binding data record. If the `model` parameter is provided, the method also checks whether the record is an instace of the given model.
+
+- `isModel(thing)`<br />
+	Determine whether the passed argument is a JSchema.Binding data model
 
 ### Model Methods ###
 
@@ -291,23 +297,39 @@ These methods are internal to JSchema most of the time, but they're there to use
 
 TODO
 ----
+
+### Bugs ###
+- Fix revertToState() not clearing properties from the current object which aren't set in the reverting state (probably needs to get a diff of all elements, instead of stopping at top-level difference)
 - Archive old attributes when event deferring is enabled
 	- (symptom?) while marshalling, subsequent edits to the same property only show as the final difference afterwards
-- `clear()` events
-- Allow nesting record instances inside each other
-- Retrieve default values from schema when **reading**
-	- when creating, events should fire from undefined => defaults
-- validate readonly properties
-- when objects within arrays are set but unmodified, a change is detected on the object
-- ensure all callback contexts are being carried through to execution
-- fire events in correct order internally in databinding to reduce sort time when firing
-- Add error callback value passing for dependencies
+- Arrays
+	- changing individual array elements directly doesnt fire events
+	- when objects within arrays are set but unmodified, a change is detected on the object
 - fix trailing star wildcards skipping bottom-level events when bubbling property changes
+- \* wildcards appear to be working incorrectly with multiple levels
+
+### Incomplete features ###
+- fire `clear()` events properly
+- Add error callback value passing for dependencies
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
+- set cache threshold for ID tracking to limit record storage
+
+### Additions ###
+- Allow nesting record instances inside each other
+- Retrieve & set default values from schema when creating records
+	- events should fire from undefined => defaults
+- validate readonly properties
+- validate URI format
 - Allow creating separate environments with JSV
+- Expose more useful JSV methods & options
+	- allow setting validateReferences & enforceReferences to false in JSV when loading
 - do mootools branch
+
+### Review ###
+- fire events in correct order internally in databinding to reduce sort time when firing
+- ensure all callback contexts are being carried through to execution
 - refactor some duplicate EventHandler code for reuse
-- cleanup prototype chains & allow Model `addEvent` et al to affect existing instances so these events don't always have to be assigned first
+- check use of __proto__ cross-browser
 
 Known Issues
 ------------
