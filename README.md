@@ -37,8 +37,10 @@ Features
   Naturally, all changes to data objects are validated against your schema in real-time and can provide feedback of any changes and errors straight to your UI or other application code.
 	- **Enhanced errors**<br />
 	  JSV's standard error objects are augmented with attributes for the current value,
-	_ **Error bubbling**<br />
+	- **Error bubbling**<br />
 	  Using the same event mechanism as with change events, errors bubble up to their parent properties. The array of schema error data at each point in the chain contains all errors relevant for that object and all its child properties.
+- **Record composition**<br />
+  Record instances can be seamlessly inserted into each other providing for composite data relationships and sharing of data between records. JSchema allows you to deal directly with the data whilst ensuring that changes to attributes from a parent record immediately propagate to attributes shared with their children, and from child records back up to their parents.
 - **ID tracking**<br />
   When configured to do so, record IDs are automatically tracked and record instances can be retrieved from your models via `getRecordById()`.
 
@@ -252,6 +254,8 @@ These methods are available to all individual Record instances.
 	 Return the record's ID. Only works if `idField` has been set.
 - `getAttributes()` / `getAll()`<br />
 	 Retrieve a copy of the complete data record from the Binding.
+- `getSubrecord(attribute)`<br />
+	 Works as with `get()`, except that only subattributes which are instances of other JSchema records will be returned. Used for pulling child record objects back out of their parents after injection.
 
 #### Change Handling ####
 
