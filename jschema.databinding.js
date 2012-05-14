@@ -1072,7 +1072,7 @@ JSchema.Binding.prototype.getAll = JSchema.Binding.prototype.getAttributes;
 /**
  * Creates a new JSchema.Binding Model, aka a data type, aka object class
  *
- * @param object schema  JSON schema object for validating instances of this Model
+ * @param object schema  JSON schema object for validating instances of this Model, or the ID of a registered schema to use
  * @param object options default options for instances of this validator:
  *                     - idField: 			key name of the object's attributes to use to
  *                     						determine record uniqueness. Defaults to 'id'.
@@ -1091,23 +1091,33 @@ JSchema.Binding.prototype.getAll = JSchema.Binding.prototype.getAttributes;
  */
 JSchema.Binding.Create = function(schema, modelOptions)
 {
-	// :TODO: allow creating by schema ID
 	// preprocess the schema and attempt registration the schema if it is not already a JSONSchema instance
-	if (!JSV.isJSONSchema(schema) && jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
-		// if it has an id, check whether it's already been registered
-		var tempSchema = null;
-		if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
-			// and if not, register it
-			schema = JSchema.registerSchema(schema);
-		}
-		if (tempSchema) {
-			schema = tempSchema;
+	if (!JSV.isJSONSchema(schema)) {
+		if (jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
+			// if it has an id, check whether it's already been registered
+			var tempSchema = null;
+			if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
+				// and if not, register it
+				schema = JSchema.registerSchema(schema);
+			}
+			if (tempSchema) {
+				schema = tempSchema;
+			}
+		} else {
+			// if provided schema isn't an object, see if it's an ID
+			var tempSchema = JSchema.getSchema(schema);
+			if (!tempSchema) {
+				// :TODO: throw bad schema error
+			} else {
+				schema = tempSchema;
+			}
 		}
 	}
 
 	// create a new binding instance to use as our Model
 	var Model = new JSchema.Binding(schema, modelOptions);
 
+	// create Record constructor bound to the Model prototype
 	var Record = function(attrs, options) {
 		// private record variables
 		this.attributes = {};
