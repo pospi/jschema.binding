@@ -5,9 +5,14 @@ JSchema.Binding
 
 About
 -----
-JSchema.Binding is a lightweight framework for managing complex, data-driven UIs. It allows for binding UI callbacks to data *models* (or classes) and *records* (or instances), and for manipulating those records' data. In a nutshell, it basically serves to keep your UI fresh, synchronised and responsive. Everything else is up to you.
+JSchema.Binding is a lightweight framework for managing complex, data-driven UIs. It allows for binding UI callbacks to data *Models* (or classes) and *Records* (or instances), and for manipulating those records' data. It also provides JSON schema validation over record data using [JSV](https://github.com/garycourt/JSV) internally to check changes in real time. In a nutshell, it basically serves to keep your UI fresh, synchronised, valid and responsive. Everything else is up to you.
 
-Binding performs no ajax operations and is not a full MVC framework, but could easily be used as a strong foundation to build one. If you are after something more heavyweight, try the excellent [http://backbonejs.org/](Backbone.js) (which indeed influences some of Binding's design).
+If you already use JSON schema with your application, think of JSchema.Binding as adding state to your validation.<br />
+For simple data manipulation tasks or applications without the need for clientside data validation, Binding is a more than adequate event engine and data handling layer all on its own - just pass `false` insted of a schema when creating new Models.
+
+Binding performs no ajax operations and is not a full MVC framework, but could easily be used as a strong foundation to build one. If you are after something more heavyweight, try the excellent [Backbone.js](http://backbonejs.org/) (which indeed influences some of Binding's design).
+
+Please note: you should clone this repository with `git clone --recursive`.
 
 Features
 --------
@@ -115,6 +120,8 @@ In normal usage, you'll probably first want to pull down your JSON schema files 
 		jQuery.post(/* some URL for updating the record */, something.getAll());
 		// ...or just the changes.
 		jQuery.post(/* some URL for updating the record */, something.getChangedAttributes());
+
+		// note that we would call something.changesPropagated() upon a successful POST call being completed
 	}
 
 My APIs, Let Me Show You Them
@@ -313,13 +320,14 @@ TODO
 - \* wildcards appear to be working incorrectly with multiple levels
 
 ### Incomplete features ###
+- Record composition:
+	- Fire events from changes in child records
 - fire `clear()` events properly
 - Add error callback value passing for dependencies
 - remove `clearIdOnClone` option or add `storeInstances` option to select between these behaviours
 - set cache threshold for ID tracking to limit record storage
 
 ### Additions ###
-- Allow nesting record instances inside each other
 - Retrieve & set default values from schema when creating records
 	- events should fire from undefined => defaults
 - validate readonly properties
@@ -333,7 +341,6 @@ TODO
 - fire events in correct order internally in databinding to reduce sort time when firing
 - ensure all callback contexts are being carried through to execution
 - refactor some duplicate EventHandler code for reuse
-- check use of __proto__ cross-browser
 
 Known Issues
 ------------
