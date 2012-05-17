@@ -1,4 +1,4 @@
-(function() {
+(function($) {
 /**
  * Data Binding
  *
@@ -129,7 +129,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	// Return a copy of our attributes
 	getAttributes : function()
 	{
-		return JSchema.extendAndUnset(jQuery.isArray(this.attributes) ? [] : {}, this.attributes);	/* LIBCOMPAT */
+		return JSchema.extendAndUnset($.isArray(this.attributes) ? [] : {}, this.attributes);	/* LIBCOMPAT */
 	},
 
 	//======== Replication handling =========
@@ -182,7 +182,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	 */
 	getChangedAttributes : function(includePrevValue, old, now)
 	{
-		now = JSchema.extendAndUnset(jQuery.isArray(now) ? [] : {}, now || this.getAttributes())	/* LIBCOMPAT */
+		now = JSchema.extendAndUnset($.isArray(now) ? [] : {}, now || this.getAttributes())	/* LIBCOMPAT */
 		old || (old = this._previousAttributes);
 
 		var changes,
@@ -190,8 +190,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			attr;
 
 		for (attr in old) {
-			if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))		/* LIBCOMPAT */
-			  && (jQuery.isPlainObject(old[attr]) || jQuery.isArray(old[attr])) ) {	/* LIBCOMPAT */
+			if ( ($.isPlainObject(now[attr]) || $.isArray(now[attr]))		/* LIBCOMPAT */
+			  && ($.isPlainObject(old[attr]) || $.isArray(old[attr])) ) {	/* LIBCOMPAT */
 			  	changes = this.getChangedAttributes(includePrevValue, old[attr], now[attr]);
 			  	if (changes) {
 			  		changed || (changed = {});
@@ -243,7 +243,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		if (stateName && !this._savedStates[stateName]) {
 			return null;
 		}
-		return JSchema.extendAndUnset(jQuery.isArray(this._previousAttributes) ? [] : {}, stateName ? this._savedStates[stateName] : this._previousAttributes);	/* LIBCOMPAT */
+		return JSchema.extendAndUnset($.isArray(this._previousAttributes) ? [] : {}, stateName ? this._savedStates[stateName] : this._previousAttributes);	/* LIBCOMPAT */
 	},
 
 	/**
@@ -333,7 +333,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		// if creating and the whole record is an array, our attributes should be too!
-		if (isCreating && jQuery.isArray(attrs)) {	/* LIBCOMPAT */
+		if (isCreating && $.isArray(attrs)) {	/* LIBCOMPAT */
 			this.attributes = [];
 		}
 
@@ -355,8 +355,8 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				} else {
 					this._subObjects[attr].set(val);
 				}
-			} else if ( (jQuery.isPlainObject(now[attr]) || jQuery.isArray(now[attr]))	/* LIBCOMPAT */
-			  && (jQuery.isPlainObject(val) || jQuery.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
+			} else if ( ($.isPlainObject(now[attr]) || $.isArray(now[attr]))	/* LIBCOMPAT */
+			  && ($.isPlainObject(val) || $.isArray(val)) ) {			// object merging & array modification (LIBCOMPAT)
 				var result = this._handleObjectChange(attr, now[attr], val, suppressEvent, isCreating);
 				now[attr] = result[0];
 				if (result[1]) {
@@ -802,7 +802,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	setSchema : function(schema)
 	{
 		// attempt registering the schema if it is not already a reference to one
-		if (!JSV.isJSONSchema(schema) && jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
+		if (!JSV.isJSONSchema(schema) && $.isPlainObject(schema)) {		/* LIBCOMPAT */
 			// if it has an id, check whether it's already been registered
 			var tempSchema = null;
 			if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
@@ -879,9 +879,9 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		this.fireEventUntilDepth(eventName, stopAtLevel, this, JSchema.deepCopy(oldValue), JSchema.deepCopy(newValue), propertyString, eventName);
 
 		// check for a primitive value being replaced by an object, fire child create events when necessary
-		if (!jQuery.isArray(oldValue) && !jQuery.isPlainObject(oldValue) && (jQuery.isArray(newValue) || jQuery.isPlainObject(newValue))) {	/* LIBCOMPAT */
+		if (!$.isArray(oldValue) && !$.isPlainObject(oldValue) && ($.isArray(newValue) || $.isPlainObject(newValue))) {	/* LIBCOMPAT */
 			this._fireChildAttributeEvents(propertyString, undefined, newValue);
-		} else if (!jQuery.isArray(newValue) && !jQuery.isPlainObject(newValue) && (jQuery.isArray(oldValue) || jQuery.isPlainObject(oldValue))) {	/* LIBCOMPAT */
+		} else if (!$.isArray(newValue) && !$.isPlainObject(newValue) && ($.isArray(oldValue) || $.isPlainObject(oldValue))) {	/* LIBCOMPAT */
 			this._fireChildAttributeEvents(propertyString, oldValue, undefined);
 		}
 	},
@@ -903,7 +903,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			clone;
 
 		// if the existing object was an array, we wil need to check its length after updating
-		var previousIsArray = jQuery.isArray(oldObject);	/* LIBCOMPAT */
+		var previousIsArray = $.isArray(oldObject);	/* LIBCOMPAT */
 
 		// store a copy of the object prior to modification so that we can return the old one in a change event
 		var previousObject = {};
@@ -936,11 +936,11 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				} else {
 					this._subObjects[newEventStr].set(copy);
 				}
-			} else if ( copy && ( jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)) ) ) {	/* LIBCOMPAT */
-				if ( (!src && copyIsArray) || (srcIsArray = jQuery.isArray(src)) ) {	/* LIBCOMPAT */
+			} else if ( copy && ( $.isPlainObject(copy) || (copyIsArray = $.isArray(copy)) ) ) {	/* LIBCOMPAT */
+				if ( (!src && copyIsArray) || (srcIsArray = $.isArray(src)) ) {	/* LIBCOMPAT */
 					clone = src && srcIsArray ? src : [];
 				} else {
-					clone = src && jQuery.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
+					clone = src && $.isPlainObject(src) ? src : {};	/* LIBCOMPAT */
 				}
 
 				var results = this._handleObjectChange(newEventStr, clone, copy, suppressEvent, isCreating);
@@ -1060,7 +1060,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 				this.fireEventUntilDepth(eventName, propertyString.split('.').length + 1, this, JSchema.deepCopy(newVal), undefined, propertyString, eventName);
 			}
 
-			if (jQuery.isArray(newVal) || jQuery.isPlainObject(newVal)) { /* LIBCOMPAT */
+			if ($.isArray(newVal) || $.isPlainObject(newVal)) { /* LIBCOMPAT */
 				this._fireChildAttributeEvents(propertyString, typeof oldObj == 'undefined' ? undefined : (oldObj[i] || undefined), typeof newObj == 'undefined' ? undefined : (newObj[i] || undefined));
 			}
 		}
@@ -1097,7 +1097,7 @@ JSchema.Binding.Create = function(schema, modelOptions)
 {
 	// preprocess the schema and attempt registration the schema if it is not already a JSONSchema instance
 	if (!JSV.isJSONSchema(schema)) {
-		if (jQuery.isPlainObject(schema)) {		/* LIBCOMPAT */
+		if ($.isPlainObject(schema)) {		/* LIBCOMPAT */
 			// if it has an id, check whether it's already been registered
 			var tempSchema = null;
 			if (!schema['id'] || !(tempSchema = JSchema.getSchema(schema.id))) {
