@@ -45,10 +45,10 @@ JSchema.Binding = function(schema, modelOptions)
 	this._fragmentChar = false;		// cached fragment identifier interpreted from reading the record's schema
 };
 
-JSchema.extendAndUnset(JSchema.Binding.prototype, {
+//=============================================================================================
+//	Model (class / static) methods
 
-	//=============================================================================================
-	//	Model (class / static) methods
+JSchema.Binding.modelProto = {
 
 	getRecordById : function(id)
 	{
@@ -82,9 +82,13 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 			}
 		}
 		return instances;
-	},
+	}
+};
 
-	//=============================================================================================
+//=============================================================================================
+//	Record (object / instance) methods
+
+JSchema.extendAndUnset(JSchema.Binding.prototype, {
 	//	Accessors
 
 	//======= Current state ========
@@ -605,7 +609,7 @@ JSchema.extendAndUnset(JSchema.Binding.prototype, {
 		}
 
 		// create the copy
-		var obj = new this.Model(attribs, this.options);
+		var obj = new this.Model.constructor(attribs, this.options);
 
 		// reference all subobjects into the cloned record at their positions as well
 		for (var subAttr in this._subObjects) {
@@ -1114,12 +1118,12 @@ JSchema.Binding.Create = function(schema, modelOptions)
 		}
 	}
 
-	// create a new binding instance to use as our Model
-	var Model = new JSchema.Binding(schema, modelOptions);
+	// create a new binding instance for inheriting records from
+	var proto = new JSchema.Binding(schema, modelOptions);
 
-	// create Record constructor bound to the Model prototype
-	var Record = function(attrs, options) {
-		// private record variables
+	// create Model / record constructor
+	var Model = function(attrs, options) {
+		// private Model variables
 		this.attributes = {};
 		this._subObjects = {};
 		this._previousAttributes = null;
@@ -1128,10 +1132,10 @@ JSchema.Binding.Create = function(schema, modelOptions)
 		this._validating = true;
 
 		// detach instance callbacks from the prototype's to ensure we only modify our own copies
-		this._callbacks = JSchema.extendAndUnset({}, Record._callbacks);
+		this._callbacks = JSchema.extendAndUnset({}, Model._callbacks);
 
-		// add model reference
-		this.Model = Record;
+		// add model reference (same as this.__proto__)
+		this.Model = proto;
 
 		// override default options from model if instance options provided, replaces options from model
 		if (options) {
@@ -1155,10 +1159,13 @@ JSchema.Binding.Create = function(schema, modelOptions)
 			}
 		}
 	};
-	Record.prototype = Model;	// set the prototype for all record instances
-	Record.__proto__ = Model;	// set the prototype for the model
+	Model.prototype = proto;	// set the prototype for all Model instances
+	proto.constructor = Model;	// reference the constructor through the prototype for use in object cloning
 
-	return Record;
+	// add static Model methods
+	JSchema.extendAndUnset(Model, JSchema.Binding.modelProto, JSchema.EventHandler);
+
+	return Model;
 };
 
 }).call(this, jQuery);	/* LIBCOMPAT */

@@ -102,7 +102,7 @@ var JSchema = {
 	 */
 	isModel : function(thing)
 	{
-		return thing instanceof JSchema.Binding && thing.prototype !== undefined && thing.prototype instanceof JSchema.Binding;
+		return thing.prototype !== undefined && thing.prototype instanceof JSchema.Binding;
 	},
 
 	/**
