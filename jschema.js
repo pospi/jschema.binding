@@ -92,7 +92,7 @@ var JSchema = {
 		if (model) {
 			return thing instanceof model && JSchema.isModel(model);
 		}
-		return thing instanceof JSchema.Binding && (!thing.prototype || !(thing.prototype instanceof JSchema.Binding));
+		return thing instanceof JSchema.Binding;
 	},
 
 	/**
