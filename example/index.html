@@ -68,9 +68,9 @@ jQuery(document).ready(function() {			/* LIBCOMPAT */
 	{
 		lineClass = ' function';
 		outputLine.call(this,
-			fn.toString().replace(/^\s*function\s*\((\w|,|\s)*\)\s*\{\s*/, '')
+			jQuery.trim(fn.toString().replace(/^\s*function\s*\((\w|,|\s)*\)\s*\{\s*/, '')
 						 .replace(/\}\s*$/, '')
-						 .replace(/^\s*/gm, '').trim());
+						 .replace(/^\s*/gm, '')));
 		fn();
 	}
 	//----------------------------------------------------
@@ -97,6 +97,9 @@ outputFn(function() {
 				"minimum":0,
 				"required":true
 			},
+			"type" : {
+				"type" : "string"
+			},
 			"tags":{
 				"type":"array",
 				"items":{
@@ -104,7 +107,7 @@ outputFn(function() {
 				}
 			},
 			"categories":{
-				"type":"array",
+				"type":["array", "boolean"],
 				"items":{
 					"type":"number"
 				}
@@ -213,7 +216,6 @@ outputFn(function() {
 	    doCreateEvents : false,
 	});
 });
-
     //-------------------------------------------------------------
     // Some callbacks to test the object's events
 
@@ -265,8 +267,14 @@ outputFn(function() {
     	record_id : 0,
     	name : "test",
     	price : 12
-    })
+    });
 	outputLine('record constructed:', test.getAll());
+
+outputFn(function() {
+	outputLine('testmodel proto is binding: ', TestModel.prototype instanceof JSchema.Binding);
+	outputLine('test is binding: ', test instanceof JSchema.Binding);
+	outputLine('test is its model: ', test instanceof TestModel);
+});
 
 	outputHeader('Adding some more events, but just to this object');
 outputFn(function() {
@@ -320,11 +328,11 @@ outputFn(function() {
 		}	// do something when any "price" value in any object changes
 	});
 });
+
 	outputHeader("Setting name");
 outputFn(function() {
-	test.set({ name : 'feeeeeeeeeeeed' });
+	test.set({ name : 'i am the first test' });
 });
-
 	// See here how the same setter fires less events for this object since it
 	// doesn't have an extra change event bound to it
 	outputHeader("Second data record with an instance change event bound in addition to the model's event");
@@ -333,17 +341,17 @@ outputFn(function() {
 		name : "test2",
 		price : 12
 	})
-	outputLine('record constructed:', test2.getAll());
+	outputLine('record constructed:', test2.getAll(), test.getAll());
 outputFn(function() {
-	test2.addEvent('change.update.name', function(record, oldval, newval, attr, eventName) {
-		propChange("change.update.name [instance]", record, oldval, newval, attr, eventName);
+	test2.addEvent('change.?.name', function(record, oldval, newval, attr, eventName) {
+		propChange("change.?.name [instance]", record, oldval, newval, attr, eventName);
 	});				// do something in addition to the model's change event when this record changes
 });
 	outputHeader("Setting name on the second record");
 outputFn(function() {
 	test2.set({ name : 'feeeeeeeeeeeed' });
 });
-
+// console.log('INSTANCES AS FOLLOWS: ', test.get('name'), test2.get('name'), TestModel.get, Object.keys(test._callbacks).length, Object.keys(test2._callbacks).length, Object.keys(TestModel._callbacks).length);
 	outputHeader("Instance events are ignored when cloning...");
 outputFn(function() {
 	test2copy = test2.clone();
@@ -355,10 +363,12 @@ outputFn(function() {
 	test2copy2.set({ name : 'burp' });
 });
 
-	outputHeader("Initialising object_test");
+	outputHeader("Initialising object_test & type");
 outputFn(function() {
-	test.set({ object_test : {key : 'TEST', anotherValue : 13.34} });
+	test.set({ type : 'a_type', object_test : {key : 'TEST', anotherValue : 13.34} });
 });
+	outputHeader("Last changes:");
+	outputLine(test.getChangedAttributes());
 	outputLine("let's also save the record's state now", test.getAll());
 outputFn(function() {
 	test.saveState('some_state');
@@ -401,20 +411,45 @@ outputFn(function() {
 outputFn(function() {
 	test.set({ categories : [10, 9] });
 });
+	outputHeader("Adding to categories array using .push() helper");
+outputFn(function() {
+	test.push('categories', 114);
+});
+	outputHeader("Subtracting from categories array using .pop() helper");
+outputFn(function() {
+	test.pop('categories');
+});
+	outputHeader("Merging in a new category using an object with specific index to augment the array:");
+outputFn(function() {
+	test.set({ categories : { "3" : 33 } });
+});
 	outputHeader("Setting price");
 outputFn(function() {
 	test.set({ price : 100 });
 });
 	outputHeader("Setting price on obj_test");
 outputFn(function() {
-	test.set({ object_test : {price : 10} });
+	test.set({ object_test : {price : 10}, type : undefined });
 });
 	outputHeader("Change tests:");
 	outputLine('last change on record:', test.getChangedAttributes());
 	outputLine('last change (showing diffs):', test.getChangedAttributes(true));
 	outputLine('all changes since state was saved:', test.getChangedAttributes(false, test.getPreviousAttributes('some_state')));
+	outputLine('Note that `type` was not included since it has been removed from the object, and having `undefined` in an object will not include the value. You could retrieve the differences showing old values to get the data included.');
 	outputLine('record\'s current and old attributes:', test.getAll(), test.getPreviousAttributes('some_state'));
 	outputLine('reverting record...');
+outputFn(function() {
+	test.revertToState('some_state');
+});
+	outputHeader('Test erasing a whole object on the record');
+outputFn(function() {
+	test.unset('object_test');
+});
+	outputHeader('We can also replace elements with complex data and have all child events fired:');
+outputFn(function() {
+	test.set('categories', false);
+	test.set('categories', [12]);
+});
 outputFn(function() {
 	test.revertToState('some_state');
 });
@@ -502,9 +537,21 @@ outputFn(function() {
 outputHeader('Creating an independent subobject using a sub-schema');
 outputFn(function() {
 	TestModel2 = JSchema.Binding.Create(JSchema.getSchema('http://example.com/TestModel#stringArray'));
-	test2 = new TestModel2(['this', 'is', 'an', 'array', 'of', 'strings']);
+	test2 = new TestModel2(['array', 'of', 'strings']);
 });
 	outputLine(test2.getAll());
+
+outputHeader('You can edit these objects independently, place them back into the master record seamlessly and pull them back out again:');
+outputFn(function() {
+	test.set('object_test.stringArray', test2);
+	test2.set('2', 'stuff');
+});
+	outputLine('test\'s stringArray member & test2 are now: ', test.getAll(), test.get('object_test.stringArray'), test2.getAll());
+outputFn(function() {
+	test3 = test.clone();
+	test2.set('1', 'thangs!!');
+});
+	outputLine('same on an object cloned from test: ', test3.getAll(), test3.get('object_test.stringArray'), test2.getAll(), test.getAll(), test.get('object_test.stringArray'));
 
 	outputHeader("Error tests follow..:");
 
