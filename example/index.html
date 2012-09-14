@@ -271,9 +271,10 @@ outputFn(function() {
 	outputLine('record constructed:', test.getAll());
 
 outputFn(function() {
-	outputLine('testmodel proto is binding: ', TestModel.prototype instanceof JSchema.Binding);
-	outputLine('test is binding: ', test instanceof JSchema.Binding);
+	outputLine('testmodel is a model: ', JSchema.isModel(TestModel));
+	outputLine('test is a model: ', JSchema.isRecord(test));
 	outputLine('test is its model: ', test instanceof TestModel);
+	outputLine('test is a Binding: ', test instanceof JSchema.Binding);
 });
 
 	outputHeader('Adding some more events, but just to this object');
